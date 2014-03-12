@@ -8,7 +8,7 @@ git submodule add https://github.com/jpata/UserCode-CMG-CMGTools-External CMSSW/
 git submodule add https://github.com/jpata/AnalysisModules CMSSW/src/AnalysisModules
 
 #pull common PAT code for TTH and singletop
-git submodule add https://github.com/jpata/tth-pfbreco CMSSW/src/UserCode/TTHBBPAT
+git submodule add https://github.com/jpata/tth-pfbreco CMSSW/src/UserCode/TTHPAT
 
 cd CMSSW/src
 #PAT from https://twiki.cern.ch/twiki/bin/view/CMSPublic/SWGuidePATReleaseNotes52X#Add_CSCTightHaloFilter_CMSSW_5_3
