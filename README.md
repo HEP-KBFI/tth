@@ -1,6 +1,7 @@
 tth
 ===
 
+A concise TWiki describing this analysis is located in https://twiki.cern.ch/twiki/bin/view/Main/TTHTallinn
 
 Setup
 =====
