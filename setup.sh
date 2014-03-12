@@ -7,8 +7,11 @@ git submodule add https://github.com/jpata/UserCode-CMG-CMGTools-External CMSSW/
 #pull common PAT code for TTH and singletop
 git submodule add https://github.com/jpata/tth-pfbreco CMSSW/src/UserCode/TTHBBPAT
 
-#install electron ID
 cd CMSSW/src
+#PAT from https://twiki.cern.ch/twiki/bin/view/CMSPublic/SWGuidePATReleaseNotes52X#Add_CSCTightHaloFilter_CMSSW_5_3
+git cms-addpkg PhysicsTools/PatAlgos
+
+#electron ID
 git cms-addpkg EgammaAnalysis/ElectronTools
 cd EgammaAnalysis/ElectronTools/data/
 cat download.url | xargs wget
