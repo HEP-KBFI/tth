@@ -1,0 +1,6 @@
+<use   name="DataFormats/JetReco"/>
+<use   name="DataFormats/Math"/>
+<use   name="DataFormats/TrackReco"/>
+<use   name="DataFormats/HepMCCandidate"/>
+<use   name="rootphysics"/>
+<use   name="rootrflx"/>
