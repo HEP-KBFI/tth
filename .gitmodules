@@ -4,3 +4,6 @@
 [submodule "CMSSW/src/AnalysisModules"]
 	path = CMSSW/src/AnalysisModules
 	url = https://github.com/jpata/AnalysisModules
+[submodule "CMSSW/src/UserCode/TTHBBPAT"]
+	path = CMSSW/src/UserCode/TTHBBPAT
+	url = git@github.com:jpata/tth-pfbreco.git
