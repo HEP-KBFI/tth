@@ -1,3 +1,7 @@
+#!/bin/bash
+#abort on error
+set -e
+
 source /cvmfs/cms.cern.ch/cmsset_default.sh
 scram project -n CMSSW CMSSW CMSSW_5_3_16_patch1
 
