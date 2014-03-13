@@ -44,4 +44,4 @@ git submodule update
 #git submodule add https://github.com/jpata/tth-pfbreco CMSSW/src/UserCode/TTHPAT
 
 
-echo "setup succeeded"
+echo "!!!!!!!! setup succeeded !!!!!!!!"
