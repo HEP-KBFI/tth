@@ -1,6 +1,10 @@
 #!/bin/bash
+
 #abort on error
 set -e
+
+#print all lines
+set -x
 
 rm -Rf CMSSW/src
 source /cvmfs/cms.cern.ch/cmsset_default.sh
@@ -25,6 +29,7 @@ cat download.url | xargs wget
 cd ../..
 
 echo "running submodule init"
+git checkout CMSSW/src
 git submodule init
 
 #submodules already added
@@ -37,6 +42,5 @@ git submodule init
 ##pull common PAT code for TTH and singletop
 #git submodule add https://github.com/jpata/tth-pfbreco CMSSW/src/UserCode/TTHPAT
 
-git checout CMSSW/src
 
 echo "setup succeeded"
