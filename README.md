@@ -14,5 +14,5 @@ Setup
 Simple FWLite event loop example over PAT-tuple
 =======================================
 1. Code is in `CMSSW/src/UserCode/TTHPAT/bin/simple_loop.cc`
-1. compile with `scram b`
+1. compile with `scram b UserCode/TTHPAT`
 2. run `$CMSSW_BASE/bin/$SCRAM_ARCH/simple_loop`, takes as input `input.root`
