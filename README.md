@@ -7,7 +7,7 @@ Setup
 =====
 0. Be in a clean directory, with no CMSSW setup and no `cmsenv`. If you don't want to constantly write your password for git, add your keyfile to ssh-agent.
 1. check out code with `git clone https://github.com/HEP-KBFI/tth.git`
-2. run `./setup.sh` or if it doesn't work, run it manually line-by-line
+2. run `./setup.sh` or if it doesn't work, run it manually line-by-line and see where it fails
 3. `make`
 
 
