@@ -31,6 +31,7 @@ cd $CMSSW_BASE/..
 echo "running submodule init"
 git checkout CMSSW/src
 git submodule init
+git submodule update
 
 #submodules already added
 ##pull PU jet ID code
