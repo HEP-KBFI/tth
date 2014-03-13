@@ -26,7 +26,7 @@ git cms-addpkg EgammaAnalysis/ElectronTools
 echo "getting electron MVAs "
 cd EgammaAnalysis/ElectronTools/data/
 cat download.url | xargs wget
-cd ../..
+cd $CMSSW_BASE/..
 
 echo "running submodule init"
 git checkout CMSSW/src
