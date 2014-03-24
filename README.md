@@ -12,6 +12,10 @@ Setup
 3. make sure the last line printed out is `setup succeeded`, otherwise there were problems
 4. run `make` to compile
 
+Creating a PAT-tuple (step1)
+============================
+0. Make sure the code successfully compiled (see the section **Setup**)
+1. create a sample tuple by running `cmsRun CMSSW/src/UserCode/TTHPAT/python/pfbreco_mc_cfg.py`
 
 FWLite example code
 =======================================
