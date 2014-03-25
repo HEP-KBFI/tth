@@ -3,7 +3,7 @@ build:
 
 test: test_step1
 
-test_step1: test_step1_mc_signal test_step1_mc_ttbar
+test_step1: test_step1_mc_signal test_step1_mc_ttbar test_step1_mc_signal_tautau
 
 STEP1_MC=cmsRun CMSSW/src/UserCode/TTHPAT/python/pfbreco_mc_cfg.py maxEvents=1000
 
