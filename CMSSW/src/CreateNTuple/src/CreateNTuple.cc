@@ -51,10 +51,8 @@
 #include "TH1.h"
 #include "TTree.h"
 #include <TLorentzVector.h>
-
 #include <algorithm> 
 #include <string>
-
 //
 // class declaration
 //
@@ -335,7 +333,6 @@ CreateNTuple::analyze(const edm::Event& iEvent, const edm::EventSetup& iSetup)
      }
    }
 
-
   //tau
   Handle<pat::TauCollection> tauPat;
   iEvent.getByLabel(tauLabel,tauPat);
@@ -372,7 +369,7 @@ CreateNTuple::analyze(const edm::Event& iEvent, const edm::EventSetup& iSetup)
 
 cout<< "New tau:  tauid: "<<tauId[np] << endl;
 
-    if(tau_byDecayModeFinding[np]==1) tauId[np] += 1;
+    if(tau_byDecayModeFinding[np]==1) tauId[np] += 1<<0;
 cout<< "decay dis: "<< tau_byDecayModeFinding[np] <<"  tauid decay: "<<tauId[np] << endl;
 
     if(tau_byLooseCombinedIsolationDeltaBetaCorr3Hits[np]==1) tauId[np]+= 1<<1;
@@ -384,25 +381,25 @@ cout<< "Medium dis: "<< tau_byMediumCombinedIsolationDeltaBetaCorr3Hits[np] <<" 
    if(tau_byTightCombinedIsolationDeltaBetaCorr3Hits[np]==1) tauId[np]+= 1<<3;
 cout<< "Tight dis: "<< tau_byTightCombinedIsolationDeltaBetaCorr3Hits[np] <<"   tauid Tight: "<<tauId[np] << endl;
 
-    if(tau_againstElectronLooseMVA3[np]==1) tauId[np]+= tauId[np]<<1;
+    if(tau_againstElectronLooseMVA3[np]==1) tauId[np]+= 1<<4;
 cout<<"against Loose ele: "<<tau_againstElectronLooseMVA3[np]<< "  tauId: "<<tauId[np] << endl;
 
-    if(tau_againstElectronMediumMVA3[np]==1) tauId[np]+= tauId[np]<<1;
+    if(tau_againstElectronMediumMVA3[np]==1) tauId[np]+= 1<<5;
 cout<<"against Medium ele: "<<tau_againstElectronMediumMVA3[np]<< "  tauId: "<<tauId[np] << endl;
 
-    if(tau_againstElectronTightMVA3[np]==1) tauId[np]+= tauId[np]<<1;
+    if(tau_againstElectronTightMVA3[np]==1) tauId[np]+= 1<<6;
 cout<<"against Tight ele: "<<tau_againstElectronTightMVA3[np]<< "  tauId: "<<tauId[np] << endl;
 
-    if(tau_againstElectronVTightMVA3[np]==1) tauId[np]+= tauId[np]<<1;
+    if(tau_againstElectronVTightMVA3[np]==1) tauId[np]+= 1<<7;
 cout<<"against VTight ele: "<<tau_againstElectronVTightMVA3[np]<< "  tauId: "<<tauId[np] << endl;
 
-    if(tau_againstMuonLoose3[np]==1) tauId[np]+= tauId[np]<<1;
+    if(tau_againstMuonLoose3[np]==1) tauId[np]+= 1<<8;
 cout<<"against Loose muon: "<<tau_againstMuonLoose3[np]<<"  tauId: "<<tauId[np] << endl;
 
-    if(tau_againstMuonMedium3[np]==1) tauId[np]+= tauId[np]<<1;
+    if(tau_againstMuonMedium3[np]==1) tauId[np]+= 1<<9;
 cout<<"against Medium muon: "<<tau_againstMuonMedium3[np]<<"  tauId: "<<tauId[np] << endl;
 
-    if(tau_againstMuonTight3[np]==1) tauId[np]+= tauId[np]<<1;
+    if(tau_againstMuonTight3[np]==1) tauId[np]+= 1<<10;
 cout<<"against Tight muon: "<<tau_againstMuonTight3[np]<<"  tauId: "<<tauId[np] << endl;
     np++;
   }//tau
