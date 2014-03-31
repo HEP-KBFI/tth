@@ -72,6 +72,8 @@ private:
   virtual void beginLuminosityBlock(edm::LuminosityBlock const&, edm::EventSetup const&);
   virtual void endLuminosityBlock(edm::LuminosityBlock const&, edm::EventSetup const&);
 
+  int recurseDecayTree(const reco::Candidate& p, int mother_index);
+
   // ----------member data ---------------------------
   edm::InputTag rhoLabel, puLabel, genLabel, vtxLabel, tauLabel, muonLabel, elecLabel, jetLabel, metLabel;
   //evt
@@ -79,7 +81,8 @@ private:
   //PU
   double npu, rho;
   //gen
-  int gnp, gstatus[MAXPART], gpid[MAXPART], gmother;
+  int gnp, gstatus[MAXPART], gpid[MAXPART], gmother[MAXPART];
+  const reco::Candidate * genparticle_cands[MAXPART];
   double gpx[MAXPART], gpy[MAXPART], gpz[MAXPART], ge[MAXPART];
   //evt vtx
   int nvtx;
@@ -158,13 +161,13 @@ CreateNTuple::analyze(const edm::Event& iEvent, const edm::EventSetup& iSetup)
   using namespace reco; using namespace edm; using namespace pat; using namespace std; using namespace isodeposit;
 
   // Re-initialize all variables to zero as a new event has begun
-  run=0; lumi=0; ev=0; np=0; rho=0; npu=0; gnp=0; gmother=0, nvtx=0;
+  run=0; lumi=0; ev=0; np=0; rho=0; npu=0; gnp=0; nvtx=0;
   //
   metx=0; mety=0; metcov00=0; metcov10=0; metcov01=0; metcov11=0;
   //
   for (int i=0; i<MAXPART; i++) {
     //gen
-    gstatus[i]=0; gpid[i]=0; gpx[i]=0; gpy[i]=0; gpz[i]=0; ge[i]=0;
+    gstatus[i]=0; gpid[i]=0; gpx[i]=0; gpy[i]=0; gpz[i]=0; ge[i]=0; gmother[i]=0;
     //common
     px[i]=0; py[i]=0; pz[i]=0; e[i]=0; pid[i]=0; vx[i]=0; vy[i]=0; vz[i]=0; id[i]=0; disc[i]=0; iso[i]=0;
     //evt vtx
@@ -217,18 +220,23 @@ CreateNTuple::analyze(const edm::Event& iEvent, const edm::EventSetup& iSetup)
 	  nvtx++;
   }
 
-  //Gen
-  Handle<vector<reco::GenParticle> > genReco;
-  iEvent.getByLabel(genLabel,genReco);
-  for (vector<reco::GenParticle>::const_iterator it = genReco->begin(); it != genReco->end(); it++) {
-	  gstatus[gnp]     = it->status();
-	  gpid[gnp]        = it->pdgId();
-	  ge[gnp]          = it->energy();
-	  gpx[gnp]         = it->px();
-	  gpy[gnp]         = it->py();
-	  gpz[gnp]         = it->pz();
-	  gnp++ ;
-  }
+	// write out the generator level particles
+	// since we also need the mother-daughter relationships, we will recurse
+	// the decay tree instead of just looping over all particles
+	// TODO: make it handle multiple mothers properly
+	Handle<vector<reco::GenParticle> > genReco;
+	iEvent.getByLabel(genLabel,genReco);
+	for(const reco::GenParticle& genparticle : *genReco) {
+		//cout << ".. " << &genparticle << " " << genparticle.numberOfMothers() << endl;
+		if(genparticle.numberOfMothers() == 0) {
+			recurseDecayTree(genparticle, -1);
+		}
+	}
+	//cout << "Genparticles: " << genReco->size() << endl;
+	//cout << "gnp: " << gnp << endl;
+	if((int)genReco->size() != gnp) {
+		LogError("CreateNTuple") << "genReco->size() and gno do not match! " << genReco->size() << " " << gnp;
+	}
 
   //tau
   Handle<pat::TauCollection> tauPat;
@@ -426,6 +434,38 @@ CreateNTuple::analyze(const edm::Event& iEvent, const edm::EventSetup& iSetup)
 
 }
 
+int
+CreateNTuple::recurseDecayTree(const reco::Candidate& p, int mother_index)
+{
+	//using namespace std;
+
+	// check if it is already processed:
+	for(int i=0; i<gnp; i++) {
+		if(genparticle_cands[i] == &p) {
+			return i;
+		}
+	}
+
+	int index = gnp;
+	genparticle_cands[index] = &p;
+	gstatus[index] = p.status();
+	gpid[index] = p.pdgId();
+	ge[index] = p.energy();
+	gpx[index] = p.px();
+	gpy[index] = p.py();
+	gpz[index] = p.pz();
+	gmother[index] = mother_index;
+
+	gnp++;
+
+	//cout << "Mommys!: " << p.numberOfMothers() << endl;
+	for(const reco::Candidate& d : p) {
+		recurseDecayTree(d, index);
+		//cout << "  >  " << d.numberOfDaughters() << endl;
+	}
+
+	return 0;
+}
 
 // ------------ method called once each job just before starting event loop  ------------
 void
@@ -442,6 +482,7 @@ CreateNTuple::beginJob()
   t->Branch("gnp",&gnp,"gnp/I");
   t->Branch("gpdgId",gpid,"pid[gnp]/I");
   t->Branch("gstatus",gstatus,"gstatus[gnp]/I");
+  t->Branch("gmother",gmother,"gmother[gnp]/I");
   t->Branch("gpx",gpx,"gpx[gnp]/D");
   t->Branch("gpy",gpy,"gpy[gnp]/D");
   t->Branch("gpz",gpz,"gpz[gnp]/D");
