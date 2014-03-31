@@ -2,10 +2,10 @@
 //
 // Package:    CreateNTuple
 // Class:      CreateNTuple
-// 
+//
 /**\class CreateNTuple CreateNTuple.cc tthAnalysis/CreateNTuple/src/CreateNTuple.cc
 
- Description: 
+ Description:
       Main class that writes out all the leptons and relevant details for later analysis of all kind
 
  Implementation:
@@ -58,33 +58,33 @@ class CreateNTuple : public edm::EDAnalyzer {
 public:
   explicit CreateNTuple(const edm::ParameterSet&);
   ~CreateNTuple();
-  
+
   static void fillDescriptions(edm::ConfigurationDescriptions& descriptions);
-  
-  
+
+
 private:
   virtual void beginJob() ;
   virtual void analyze(const edm::Event&, const edm::EventSetup&);
   virtual void endJob() ;
-  
+
   virtual void beginRun(edm::Run const&, edm::EventSetup const&);
   virtual void endRun(edm::Run const&, edm::EventSetup const&);
   virtual void beginLuminosityBlock(edm::LuminosityBlock const&, edm::EventSetup const&);
   virtual void endLuminosityBlock(edm::LuminosityBlock const&, edm::EventSetup const&);
-  
+
   // ----------member data ---------------------------
   edm::InputTag rhoLabel, puLabel, genLabel, vtxLabel, tauLabel, muonLabel, elecLabel, jetLabel, metLabel;
-  //evt 
+  //evt
   int run, lumi, ev, np;
   //PU
   double npu, rho;
   //gen
   int gnp, gstatus[MAXPART], gpid[MAXPART], gmother;
-  double gpx[MAXPART], gpy[MAXPART], gpz[MAXPART], ge[MAXPART]; 
+  double gpx[MAXPART], gpy[MAXPART], gpz[MAXPART], ge[MAXPART];
   //evt vtx
   int nvtx;
   double evx[MAXPART], evy[MAXPART], evz[MAXPART];
-  //common 
+  //common
   int pid[MAXPART];
   double px[MAXPART], py[MAXPART], pz[MAXPART], e[MAXPART];
   double vx[MAXPART], vy[MAXPART], vz[MAXPART];
@@ -106,10 +106,10 @@ private:
   //jet
   int nDaughter[MAXPART];
   double jetb[MAXPART], neutHadEnFrac[MAXPART], neutEmEnFrac[MAXPART], chHadEnFrac[MAXPART],chMultiplicity[MAXPART], chEmEnFrac[MAXPART];
-  //met  
+  //met
   double metx, mety, metcov00, metcov10, metcov01, metcov11;
   //
-  TTree *t;  
+  TTree *t;
   TFile *f;
 };
 
@@ -164,37 +164,37 @@ CreateNTuple::analyze(const edm::Event& iEvent, const edm::EventSetup& iSetup)
   //
   for (int i=0; i<MAXPART; i++) {
     //gen
-    gstatus[i]=0; gpid[i]=0; gpx[i]=0; gpy[i]=0; gpz[i]=0; ge[i]=0;  
+    gstatus[i]=0; gpid[i]=0; gpx[i]=0; gpy[i]=0; gpz[i]=0; ge[i]=0;
     //common
     px[i]=0; py[i]=0; pz[i]=0; e[i]=0; pid[i]=0; vx[i]=0; vy[i]=0; vz[i]=0; id[i]=0; disc[i]=0; iso[i]=0;
     //evt vtx
-    evx[i]=0; evy[i]=0; evz[i]=0; 
+    evx[i]=0; evy[i]=0; evz[i]=0;
     //tau
-    tau_byDecayModeFinding[i]=0;tau_byLooseCombinedIsolationDeltaBetaCorr3Hits[i]=0; 
+    tau_byDecayModeFinding[i]=0;tau_byLooseCombinedIsolationDeltaBetaCorr3Hits[i]=0;
     tau_byMediumCombinedIsolationDeltaBetaCorr3Hits[i]=0; tau_byTightCombinedIsolationDeltaBetaCorr3Hits[i]=0;
-    tau_againstElectronLooseMVA3[i]=0; tau_againstElectronMediumMVA3[i]=0; 
+    tau_againstElectronLooseMVA3[i]=0; tau_againstElectronMediumMVA3[i]=0;
     tau_againstElectronTightMVA3[i]=0; tau_againstElectronVTightMVA3[i]=0;
     tau_againstMuonLoose3[i]=0; tau_againstMuonMedium3[i]=0; tau_againstMuonTight3[i]=0;
-    //muon   
-    sumChHadPt[i]=0; sumNeutHadEt[i]=0; sumPhotonEt[i]=0; sumPUPt[i]=0; 
-    sumChPartPt[i]=0; muonIsoPflow[i]=0; muonIsoPflowPUcorr[i]=0; 
+    //muon
+    sumChHadPt[i]=0; sumNeutHadEt[i]=0; sumPhotonEt[i]=0; sumPUPt[i]=0;
+    sumChPartPt[i]=0; muonIsoPflow[i]=0; muonIsoPflowPUcorr[i]=0;
     //elec
-    chIso03[i]=0; nhIso03[i]=0; phIso03[i]=0; puChIso03[i]=0; relIso[i]=0; relIsodb[i]=0; 
+    chIso03[i]=0; nhIso03[i]=0; phIso03[i]=0; puChIso03[i]=0; relIso[i]=0; relIsodb[i]=0;
     relIsorho[i]=0; mHit[i]=0; convVeto[i]=0; tIP[i]=0; scEta[i]=0;
     //jet
-    neutHadEnFrac[i]=0; neutEmEnFrac[i]=0; nDaughter[i]=0; chHadEnFrac[i]=0; 
+    neutHadEnFrac[i]=0; neutEmEnFrac[i]=0; nDaughter[i]=0; chHadEnFrac[i]=0;
     chMultiplicity[i]=0; chEmEnFrac[i]=0; jetb[i]=0;
   }
 
   //Evt
   run = iEvent.id().run(); lumi = iEvent.id().luminosityBlock(); ev = iEvent.id().event();
-  
+
   //Rho to be used for PU correction
   edm::Handle<double> rhoHandle;
   iEvent.getByLabel(rhoLabel,rhoHandle);
   rho = *rhoHandle;
   cout << "rho: " << rho << endl;
-   
+
 
   //PU
   if (!iEvent.isRealData()) {
@@ -218,10 +218,10 @@ CreateNTuple::analyze(const edm::Event& iEvent, const edm::EventSetup& iSetup)
   }
 
   //Gen
-  Handle<vector<reco::GenParticle> > genReco; 	
+  Handle<vector<reco::GenParticle> > genReco;
   iEvent.getByLabel(genLabel,genReco);
   for (vector<reco::GenParticle>::const_iterator it = genReco->begin(); it != genReco->end(); it++) {
-	  gstatus[gnp]     = it->status();  
+	  gstatus[gnp]     = it->status();
 	  gpid[gnp]        = it->pdgId();
 	  ge[gnp]          = it->energy();
 	  gpx[gnp]         = it->px();
@@ -242,8 +242,8 @@ CreateNTuple::analyze(const edm::Event& iEvent, const edm::EventSetup& iSetup)
 	  vx[np]      = it->vx();
 	  vy[np]      = it->vy();
 	  vz[np]      = it->vz();
-	  //tauId 
-	  tau_byDecayModeFinding[np]                          =  it->tauID("decayModeFinding"); 
+	  //tauId
+	  tau_byDecayModeFinding[np]                          =  it->tauID("decayModeFinding");
 	  tau_byLooseCombinedIsolationDeltaBetaCorr3Hits[np]  =  it->tauID("byLooseCombinedIsolationDeltaBetaCorr3Hits");
 	  tau_byMediumCombinedIsolationDeltaBetaCorr3Hits[np] =  it->tauID("byMediumCombinedIsolationDeltaBetaCorr3Hits");
 	  tau_byTightCombinedIsolationDeltaBetaCorr3Hits[np]  =  it->tauID("byTightCombinedIsolationDeltaBetaCorr3Hits");
@@ -279,7 +279,7 @@ CreateNTuple::analyze(const edm::Event& iEvent, const edm::EventSetup& iSetup)
 	  //cout<<"against Tight muon:  "<<tau_againstMuonTight3[np] <<"  id: "<<id[np] << endl;
 	  np++;
   }//tau
-  
+
 
   //muon
   Handle<pat::MuonCollection> muonPat;
@@ -303,7 +303,7 @@ CreateNTuple::analyze(const edm::Event& iEvent, const edm::EventSetup& iSetup)
 	  //cout<<"isTightMuon: "<<isTightMuon[np]<<"  id: "<<id[np] << endl;
           if(it->isLooseMuon() && it->pt()>10 && abs(it->eta())<2.5)
 	  id[np]+= 1<<2; //veto ele/muon+jet
-          
+
 	  //muonIso
 	  sumChHadPt[np]          =  it->pfIsolationR04().sumChargedHadronPt;
 	  sumNeutHadEt[np]        =  it->pfIsolationR04().sumNeutralHadronEt;
@@ -343,7 +343,7 @@ CreateNTuple::analyze(const edm::Event& iEvent, const edm::EventSetup& iSetup)
 		  id[np] += 1<<0; //dilepton
 
 	  if( it->pt()>30 && abs(it->eta())<2.5 && (!(abs(scEta[np])>1.4442 && abs(scEta[np])<1.5660)) &&
-			  tIP[np]<0.02 && convVeto && mHit[np]<=0 ) 
+			  tIP[np]<0.02 && convVeto && mHit[np]<=0 )
 		  id[np] += 1<<1; //lepton+jets
 
 	  if( it->pt()>10 && abs(it->eta())<2.5)
@@ -363,7 +363,7 @@ CreateNTuple::analyze(const edm::Event& iEvent, const edm::EventSetup& iSetup)
 	  }else{
 		  AEff03 = ElectronEffectiveArea::GetElectronEffectiveArea(ElectronEffectiveArea::kEleGammaAndNeutralHadronIso03, it->superCluster()->eta(), ElectronEffectiveArea::kEleEAFall11MC);
 	  }
-	  //cout << "AEff03"<< AEff03 << endl; 
+	  //cout << "AEff03"<< AEff03 << endl;
 
 	  chIso03[np]   =  it->chargedHadronIso();
 	  nhIso03[np]   =  it->neutralHadronIso();
@@ -380,7 +380,7 @@ CreateNTuple::analyze(const edm::Event& iEvent, const edm::EventSetup& iSetup)
   }
 
 
-  Handle<pat::JetCollection> jetPat;  
+  Handle<pat::JetCollection> jetPat;
   iEvent.getByLabel(jetLabel,jetPat);
   for (pat::JetCollection::const_iterator it = jetPat->begin(); it != jetPat->end(); it++) {
 
@@ -392,7 +392,7 @@ CreateNTuple::analyze(const edm::Event& iEvent, const edm::EventSetup& iSetup)
 	  vx[np]      = it->vx();
 	  vy[np]      = it->vy();
 	  vz[np]      = it->vz();
-	  // 
+	  //
 	  neutHadEnFrac[np]  = it->neutralHadronEnergyFraction();
 	  neutEmEnFrac[np]   = it->neutralEmEnergyFraction();
 	  nDaughter[np]      = it->numberOfDaughters();
@@ -401,12 +401,12 @@ CreateNTuple::analyze(const edm::Event& iEvent, const edm::EventSetup& iSetup)
 	  chEmEnFrac[np]     = it->chargedEmEnergyFraction();
 	  //id
 	  if ( ( abs(it->eta())<2.4 && neutHadEnFrac[np]<0.99 && neutEmEnFrac[np]<0.99 &&
-				  nDaughter[np]>1 && chHadEnFrac[np]>0 && chMultiplicity[np]>0 && chEmEnFrac[np]<0.99) || 
+				  nDaughter[np]>1 && chHadEnFrac[np]>0 && chMultiplicity[np]>0 && chEmEnFrac[np]<0.99) ||
 			  ( abs(it->eta())>2.4 && neutHadEnFrac[np]<0.99 && neutEmEnFrac[np]<0.99 && nDaughter[np]>1) );  //Loose (recommended)
 	  id[np] += 1<<0;
- 
+
 	  //Disc(btag)
-	  disc[np]  = it->bDiscriminator("combinedSecondaryVertexBJetTags"); //Loose=0.244, Medium=0.679, Tight=0.898  
+	  disc[np]  = it->bDiscriminator("combinedSecondaryVertexBJetTags"); //Loose=0.244, Medium=0.679, Tight=0.898
 
 	  np++;
   }
@@ -422,13 +422,13 @@ CreateNTuple::analyze(const edm::Event& iEvent, const edm::EventSetup& iSetup)
   metcov11= (met->front()).getSignificanceMatrix()(1,1);
 
 
-  t->Fill(); 
+  t->Fill();
 
 }
 
 
 // ------------ method called once each job just before starting event loop  ------------
-void 
+void
 CreateNTuple::beginJob()
 {
   f = new TFile("ntuple.root","RECREATE");
@@ -476,33 +476,33 @@ CreateNTuple::beginJob()
 }
 
 // ------------ method called once each job just after ending the event loop  ------------
-void 
-CreateNTuple::endJob() 
+void
+CreateNTuple::endJob()
 {
 t->Write();
 f->Close();
 }
 
 // ------------ method called when starting to processes a run  ------------
-void 
+void
 CreateNTuple::beginRun(edm::Run const&, edm::EventSetup const&)
 {
 }
 
 // ------------ method called when ending the processing of a run  ------------
-void 
+void
 CreateNTuple::endRun(edm::Run const&, edm::EventSetup const&)
 {
 }
 
 // ------------ method called when starting to processes a luminosity block  ------------
-void 
+void
 CreateNTuple::beginLuminosityBlock(edm::LuminosityBlock const&, edm::EventSetup const&)
 {
 }
 
 // ------------ method called when ending the processing of a luminosity block  ------------
-void 
+void
 CreateNTuple::endLuminosityBlock(edm::LuminosityBlock const&, edm::EventSetup const&)
 {
 }
@@ -522,7 +522,7 @@ DEFINE_FWK_MODULE(CreateNTuple);
 
 
 /* do not work!!
-    tau_byDecayModeFinding[np]                          =  it->tauID("hpsPFTauDiscriminationByDecayModeFinding"); 
+    tau_byDecayModeFinding[np]                          =  it->tauID("hpsPFTauDiscriminationByDecayModeFinding");
     tau_byLooseCombinedIsolationDeltaBetaCorr3Hits[np]  =  it->tauID("hpsPFTauDiscriminationByLooseCombinedIsolationDBSumPtCorr3Hits");
     tau_byMediumCombinedIsolationDeltaBetaCorr3Hits[np] =  it->tauID("hpsPFTauDiscriminationByMediumCombinedIsolationDBSumPtCorr3Hits");
     tau_byTightCombinedIsolationDeltaBetaCorr3Hits[np]  =  it->tauID("hpsPFTauDiscriminationByTightCombinedIsolationDBSumPtCorr3Hits");
@@ -538,9 +538,9 @@ DEFINE_FWK_MODULE(CreateNTuple);
 /*
 	  //mother
 	  for(unsigned int im = 0; im < it->numberOfMothers(); ++im) {
-		  status[np]    = it->motherRef(im)->status();  
+		  status[np]    = it->motherRef(im)->status();
 		  pid[np]       = it->motherRef(im)->pdgId();
-		  E[np]         = it->motherRef(im)->energy(); 
+		  E[np]         = it->motherRef(im)->energy();
 		  Px[np]        = it->motherRef(im)->px();
 		  Py[np]        = it->motherRef(im)->py();
 		  Pz[np]        = it->motherRef(im)->pz();
@@ -550,13 +550,13 @@ DEFINE_FWK_MODULE(CreateNTuple);
 		  Q[np]         = it->motherRef(im)->charge();
 		  PassDisc[np]  = 0;
 		  PassIso[np]   = 0.;
-		  np++; 
+		  np++;
 	  }
 	  //daughter
 	  for(unsigned int id = 0; id < it->numberOfDaughters(); ++id) {
-		  status[np]    = it->daughterRef(id)->status();  
+		  status[np]    = it->daughterRef(id)->status();
 		  pid[np]       = it->daughterRef(id)->pdgId();
-		  E[np]         = it->daughterRef(id)->energy(); 
+		  E[np]         = it->daughterRef(id)->energy();
 		  Px[np]        = it->daughterRef(id)->px();
 		  Py[np]        = it->daughterRef(id)->py();
 		  Pz[np]        = it->daughterRef(id)->pz();
@@ -566,7 +566,7 @@ DEFINE_FWK_MODULE(CreateNTuple);
 		  Q[np]         = it->daughterRef(id)->charge();
 		  PassDisc[np]  = 0;
 		  PassIso[np]   = 0.;
-		  np++; 
+		  np++;
 	  }
 */
 
