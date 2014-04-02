@@ -46,6 +46,7 @@
 //
 #include "EgammaAnalysis/ElectronTools/interface/ElectronEffectiveArea.h"
 //
+#include "CommonTools/UtilAlgos/interface/TFileService.h"
 //
 #include "TTree.h"
 #include "TFile.h"
@@ -83,7 +84,8 @@ private:
   double gpx[MAXPART], gpy[MAXPART], gpz[MAXPART], ge[MAXPART]; 
   //evt vtx
   int nvtx;
-  double evx[MAXPART], evy[MAXPART], evz[MAXPART];
+  double evx, evy, evz;
+  reco::Vertex pv;
   //common 
   int pid[MAXPART];
   double px[MAXPART], py[MAXPART], pz[MAXPART], e[MAXPART];
@@ -107,7 +109,7 @@ private:
   int nDaughter[MAXPART];
   double jetb[MAXPART], neutHadEnFrac[MAXPART], neutEmEnFrac[MAXPART], chHadEnFrac[MAXPART],chMultiplicity[MAXPART], chEmEnFrac[MAXPART];
   //met  
-  double metx, mety, metcov00, metcov10, metcov01, metcov11;
+  double metx, mety, metcov[4];
   //
   TTree *t;  
   TFile *f;
@@ -159,16 +161,13 @@ CreateNTuple::analyze(const edm::Event& iEvent, const edm::EventSetup& iSetup)
 
   // Re-initialize all variables to zero as a new event has begun
   run=0; lumi=0; ev=0; np=0; rho=0; npu=0; gnp=0; gmother=0, nvtx=0;
-  //
-  metx=0; mety=0; metcov00=0; metcov10=0; metcov01=0; metcov11=0;
+  evx=0; evy=0; evz=0; metx=0; mety=0; metcov[3]={0};
   //
   for (int i=0; i<MAXPART; i++) {
     //gen
     gstatus[i]=0; gpid[i]=0; gpx[i]=0; gpy[i]=0; gpz[i]=0; ge[i]=0;  
     //common
     px[i]=0; py[i]=0; pz[i]=0; e[i]=0; pid[i]=0; vx[i]=0; vy[i]=0; vz[i]=0; id[i]=0; disc[i]=0; iso[i]=0;
-    //evt vtx
-    evx[i]=0; evy[i]=0; evz[i]=0; 
     //tau
     tau_byDecayModeFinding[i]=0;tau_byLooseCombinedIsolationDeltaBetaCorr3Hits[i]=0; 
     tau_byMediumCombinedIsolationDeltaBetaCorr3Hits[i]=0; tau_byTightCombinedIsolationDeltaBetaCorr3Hits[i]=0;
@@ -186,35 +185,22 @@ CreateNTuple::analyze(const edm::Event& iEvent, const edm::EventSetup& iSetup)
     chMultiplicity[i]=0; chEmEnFrac[i]=0; jetb[i]=0;
   }
 
-  //Evt
+  //evt
   run = iEvent.id().run(); lumi = iEvent.id().luminosityBlock(); ev = iEvent.id().event();
-  
-  //Rho to be used for PU correction
+  //cout << "run: " << run << endl << "lumi: " << lumi << endl << "ev: " << ev << endl;   
+
+  //PU correction
   edm::Handle<double> rhoHandle;
   iEvent.getByLabel(rhoLabel,rhoHandle);
   rho = *rhoHandle;
-  cout << "rho: " << rho << endl;
-   
+  //cout << "rho: " << rho << endl;
 
-  //PU
+  //PU: https://twiki.cern.ch/twiki/bin/view/CMSPublic/SWGuideFastSimPileUp#Access_to_the_true_pile_up_distr
   if (!iEvent.isRealData()) {
 	  Handle<std::vector< PileupSummaryInfo > >  PupInfo;
 	  iEvent.getByLabel(puLabel, PupInfo);
 	  npu=PupInfo->begin()->getTrueNumInteractions();
-	  cout << "npu: "<<npu<<endl;
-  }
-
-  // Find primary vertex
-  Handle<vector<reco::Vertex>> vtxReco;
-  iEvent.getByLabel(vtxLabel,vtxReco);
-  for (vector<reco::Vertex>::const_iterator it = vtxReco->begin(); it != vtxReco->end(); it++) {
-	  evx[nvtx] = it->x();
-	  evy[nvtx] = it->y();
-	  evy[nvtx] = it->z();
-	  //cout << "evx: " << evx[nvtx]  << endl;
-	  //cout << "evy: " << evy[nvtx]  << endl;
-	  //cout << "evz: " << evz[nvtx]  << endl;
-	  nvtx++;
+	  //cout << "npu: "<<npu<<endl;
   }
 
   //Gen
@@ -227,13 +213,49 @@ CreateNTuple::analyze(const edm::Event& iEvent, const edm::EventSetup& iSetup)
 	  gpx[gnp]         = it->px();
 	  gpy[gnp]         = it->py();
 	  gpz[gnp]         = it->pz();
+	  //cout << "gstatus: " << gstatus[gnp] << endl << "gpid: " << gpid[gnp] << endl << "ge: " << ge[gnp] << endl << gpx[gnp] <<", "<<gpy[gnp]<<", "<<gpz[gnp]<<endl;      
 	  gnp++ ;
   }
+
+  //evt vtx
+  Handle<vector<reco::Vertex>> vtxReco;
+  iEvent.getByLabel(vtxLabel,vtxReco);
+  if (!vtxReco->size()) return; // We do need a vertex...
+  bool foundPV = false;
+  double sptSel=0;
+
+  for (vector<reco::Vertex>::const_iterator it = vtxReco->begin(); it != vtxReco->end(); it++) {
+	  nvtx++; // count number of vertex in the evt
+	  double spt=0; //sum track pt of the vtx
+
+	  for (vector<reco::TrackBaseRef>::const_iterator tr = it->tracks_begin(); tr != it->tracks_end(); tr++){
+		  spt+=(*tr)->pt(); 
+	  }
+	  //Good vtx
+	  if (!(it->isValid() && it->ndof() > 5 && fabs(it->z()) < 24 && it->position().rho() < 2)) continue; 
+
+	  if (!foundPV) {
+		  pv=*it;
+		  sptSel=spt;
+		  foundPV=true;
+	  }
+          //keep the vtx with the highest sum track pt
+	  else if (spt>sptSel) {
+		  pv=*it;
+		  sptSel=spt;
+	  }
+  } //vertex
+
+	  evx = pv.x();
+	  evy = pv.y();
+	  evz = pv.z();
+	  //cout << "event PV vertex: " << evx << ", "<< evy << ", " << evz  << endl<<endl;
 
   //tau
   Handle<pat::TauCollection> tauPat;
   iEvent.getByLabel(tauLabel,tauPat);
   for (pat::TauCollection::const_iterator it = tauPat->begin(); it != tauPat->end(); it++) {
+          if(!(it->isPFTau() && it->pt()>20)) continue; //tauid recommendation
 	  pid[np]     = it->pdgId();
 	  px[np]      = it->px();
 	  py[np]      = it->py();
@@ -242,7 +264,9 @@ CreateNTuple::analyze(const edm::Event& iEvent, const edm::EventSetup& iSetup)
 	  vx[np]      = it->vx();
 	  vy[np]      = it->vy();
 	  vz[np]      = it->vz();
-	  //tauId 
+	  //cout << "pid: " <<pid[np] << endl << "e: " << e[np] << endl << px[np] <<", "<<py[np]<<", "<<pz[np]<<endl;      
+	  //cout <<"tauVtx: " << vx[np] << " " << vy[np] << " " << vz[np] << endl << "taupT: "<< it->pt()<<endl;
+          //tauId https://twiki.cern.ch/twiki/bin/viewauth/CMS/TauIDRecommendation 
 	  tau_byDecayModeFinding[np]                          =  it->tauID("decayModeFinding"); 
 	  tau_byLooseCombinedIsolationDeltaBetaCorr3Hits[np]  =  it->tauID("byLooseCombinedIsolationDeltaBetaCorr3Hits");
 	  tau_byMediumCombinedIsolationDeltaBetaCorr3Hits[np] =  it->tauID("byMediumCombinedIsolationDeltaBetaCorr3Hits");
@@ -279,12 +303,12 @@ CreateNTuple::analyze(const edm::Event& iEvent, const edm::EventSetup& iSetup)
 	  //cout<<"against Tight muon:  "<<tau_againstMuonTight3[np] <<"  id: "<<id[np] << endl;
 	  np++;
   }//tau
-  
 
   //muon
   Handle<pat::MuonCollection> muonPat;
   iEvent.getByLabel(muonLabel,muonPat);
   for (pat::MuonCollection::const_iterator it = muonPat->begin(); it != muonPat->end(); it++) {
+	  if(!(it->isPFMuon() && it->pt()>10)) continue;
 	  pid[np]     = it->pdgId();
 	  px[np]      = it->px();
 	  py[np]      = it->py();
@@ -293,36 +317,36 @@ CreateNTuple::analyze(const edm::Event& iEvent, const edm::EventSetup& iSetup)
 	  vx[np]      = it->vx();
 	  vy[np]      = it->vy();
 	  vz[np]      = it->vz();
-
-	  //muonId
+	  //cout << "pid: " <<pid[np] << endl << "e: " << e[np] << endl << px[np] <<", "<<py[np]<<", "<<pz[np]<<endl;      
+	  //cout <<"vtx: " << vx[np] << " " << vy[np] << " " << vz[np] << endl;
+	  //muonId: https://twiki.cern.ch/twiki/bin/viewauth/CMS/TWikiTopRefEventSel#Muons
           if(it->isLooseMuon() && it->pt()>20 && abs(it->eta())<2.4)
-	  id[np]+= 1<<0; //dilepton
-	  //cout<<"isLooseMuon: "<<isLooseMuon[np]<<"  id: "<<id[np] << endl;
+	  id[np]+= 1<<0; //ll
+	  //cout<<"isLooseMuon: "<<it->isLooseMuon() << " " << it->pt() << " " << it->eta() << "id: "<<id[np] <<endl;
           if(it->isTightMuon(*vtxReco->begin()) && it->pt()>26 && abs(it->eta())<2.1)
-	  id[np]+= 1<<1; //lepton+jets
-	  //cout<<"isTightMuon: "<<isTightMuon[np]<<"  id: "<<id[np] << endl;
+	  id[np]+= 1<<1; //l+j
+	  //cout<<"isTightMuon: "<<it->isTightMuon(*vtxReco->begin()) << " " << it->pt() << " " << it->eta()<< "id: "<<id[np] << endl;
           if(it->isLooseMuon() && it->pt()>10 && abs(it->eta())<2.5)
-	  id[np]+= 1<<2; //veto ele/muon+jet
-          
-	  //muonIso
+	  id[np]+= 1<<2; //veto l+j
+	  //cout<<"isVetoLooseMuon: "<<it->isLooseMuon() << " " << it->pt() << " " << it->eta()<< "id: "<<id[np] << endl;
+	  //muon combined relative isolation with Delta-Beta correction: https://twiki.cern.ch/twiki/bin/view/CMSPublic/SWGuideMuonId#Muon_Isolation
 	  sumChHadPt[np]          =  it->pfIsolationR04().sumChargedHadronPt;
 	  sumNeutHadEt[np]        =  it->pfIsolationR04().sumNeutralHadronEt;
 	  sumPhotonEt[np]         =  it->pfIsolationR04().sumPhotonEt;
 	  sumPUPt[np]             =  it->pfIsolationR04().sumPUPt;
 	  sumChPartPt[np]         =  it->pfIsolationR04().sumChargedParticlePt;
-	  muonIsoPflow[np]        =  (sumChHadPt[np]+sumNeutHadEt[np]+sumPhotonEt[np])/sumChPartPt[np];
-	  muonIsoPflowPUcorr[np]  =  (sumChHadPt[np]+std::max(0., (sumNeutHadEt[np]+sumPhotonEt[np]-0.5*sumPUPt[np])))/sumChPartPt[np];
+	  if(!(sumChPartPt[np]==0)){
+		  muonIsoPflow[np]        =  (sumChHadPt[np]+sumNeutHadEt[np]+sumPhotonEt[np])/sumChPartPt[np];
+		  muonIsoPflowPUcorr[np]  =  (sumChHadPt[np]+std::max(0., (sumNeutHadEt[np]+sumPhotonEt[np]-0.5*sumPUPt[np])))/sumChPartPt[np];
+	  }
 	  iso[np]=muonIsoPflowPUcorr[np]; //dilepton=0.2, lepton+jet=0.12, (veto 0.2 for ele/muon+jet)
-
+          //cout << "muon CorrIso: "<< iso[np] << ", noCorrIso: " <<muonIsoPflow[np] <<endl;
 	  np++;
   }//muon
 
-
   Handle<ElectronCollection> elecPat;
   iEvent.getByLabel(elecLabel,elecPat);
-
   for (pat::ElectronCollection::const_iterator it = elecPat->begin(); it != elecPat->end(); it++) {
-
 	  pid[np]     = it->pdgId();
 	  px[np]      = it->px();
 	  py[np]      = it->py();
@@ -331,32 +355,31 @@ CreateNTuple::analyze(const edm::Event& iEvent, const edm::EventSetup& iSetup)
 	  vx[np]      = it->vx();
 	  vy[np]      = it->vy();
 	  vz[np]      = it->vz();
-
+	  cout << "pid: " <<pid[np] << endl << "e: " << e[np] << endl << px[np] <<", "<<py[np]<<", "<<pz[np]<<endl;      
+	  cout <<"vtx: " << vx[np] << " " << vy[np] << " " << vz[np] << endl;
           //elecId
           scEta[np]   = it->superCluster()->eta();
           tIP[np]     = it->gsfTrack()->dxy(vtxReco->begin()->position());
           convVeto[np]= it->passConversionVeto();
           mHit[np]    = it->gsfTrack()->trackerExpectedHitsInner().numberOfHits();
 
-	  if( it->pt()>20 && abs(it->eta())<2.5 &&
-			  tIP[np]<0.04 && convVeto && mHit[np]<=0 )
+	  if( it->pt()>20 && abs(it->eta())<2.5 && tIP[np]<0.04 && convVeto && mHit[np]<=0 )
 		  id[np] += 1<<0; //dilepton
-
-	  if( it->pt()>30 && abs(it->eta())<2.5 && (!(abs(scEta[np])>1.4442 && abs(scEta[np])<1.5660)) &&
-			  tIP[np]<0.02 && convVeto && mHit[np]<=0 ) 
+	  //cout << "id1: "<< id[np] <<endl <<endl;
+	  if( it->pt()>30 && abs(it->eta())<2.5 && (!(abs(scEta[np])>1.4442 && abs(scEta[np])<1.5660)) && tIP[np]<0.02 && convVeto && mHit[np]<=0 ) 
 		  id[np] += 1<<1; //lepton+jets
-
+	  //cout << "id2: "<< id[np] <<endl <<endl;
 	  if( it->pt()>10 && abs(it->eta())<2.5)
 		  id[np] += 1<<2; //veto dilepton
-
+	  //cout << "id3: "<< id[np] <<endl <<endl;
 	  if( it->pt()>20 && abs(it->eta())<2.5)
 		  id[np] += 1<<3; //veto lepton+jets
+	  //cout << "id4: "<< id[np] <<endl <<endl;
 
-          //eleDisc
+          //eleDisc(MVA)
           disc[np]  = it->electronID("mvaTrigV0");  //dilepton>0.5; lepton+jets>0.5(or 0.9); for veto need to be study
-
+          //cout << "ele disc: "<< disc[np] << endl;
           //eleIso: https://twiki.cern.ch/twiki/bin/viewauth/CMS/PfIsolation
-
 	  float AEff03 = 0.00;
 	  if(iEvent.isRealData()){
 		  AEff03 = ElectronEffectiveArea::GetElectronEffectiveArea(ElectronEffectiveArea::kEleGammaAndNeutralHadronIso03, it->superCluster()->eta(), ElectronEffectiveArea::kEleEAData2011);
@@ -364,26 +387,23 @@ CreateNTuple::analyze(const edm::Event& iEvent, const edm::EventSetup& iSetup)
 		  AEff03 = ElectronEffectiveArea::GetElectronEffectiveArea(ElectronEffectiveArea::kEleGammaAndNeutralHadronIso03, it->superCluster()->eta(), ElectronEffectiveArea::kEleEAFall11MC);
 	  }
 	  //cout << "AEff03"<< AEff03 << endl; 
-
 	  chIso03[np]   =  it->chargedHadronIso();
 	  nhIso03[np]   =  it->neutralHadronIso();
 	  phIso03[np]   =  it->photonIso();
 	  puChIso03[np] =  it->puChargedHadronIso();
-
-	  relIso[np]    =  ( chIso03[np] + nhIso03[np] + phIso03[np] ) / it->pt() ;
-	  relIsodb[np]  =  ( chIso03[np] + max(0.0, nhIso03[np] + phIso03[np] - 0.5*puChIso03[np]) )/ it->pt();
-	  relIsorho[np] =  ( chIso03[np] + max(0.0, nhIso03[np] + phIso03[np] - rho*AEff03) )/ it->pt();
-
+	  if(!(it->pt()==0)){
+		  relIso[np]    =  ( chIso03[np] + nhIso03[np] + phIso03[np] ) / it->pt() ;
+		  relIsodb[np]  =  ( chIso03[np] + max(0.0, nhIso03[np] + phIso03[np] - 0.5*puChIso03[np]) )/ it->pt();
+		  relIsorho[np] =  ( chIso03[np] + max(0.0, nhIso03[np] + phIso03[np] - rho*AEff03) )/ it->pt();
+	  }
 	  iso[np] = relIsorho[np]; // ll(<0.15), l+j(<0.1), veto ll&l+j(<0.15)
-
+	  //cout << "ele CorrIso: "<< iso[np] << ", noCorrIso: " <<relIso[np] <<endl;
 	  np++;
   }
-
 
   Handle<pat::JetCollection> jetPat;  
   iEvent.getByLabel(jetLabel,jetPat);
   for (pat::JetCollection::const_iterator it = jetPat->begin(); it != jetPat->end(); it++) {
-
 	  pid[np]     = it->pdgId();
 	  px[np]      = it->px();
 	  py[np]      = it->py();
@@ -404,10 +424,9 @@ CreateNTuple::analyze(const edm::Event& iEvent, const edm::EventSetup& iSetup)
 				  nDaughter[np]>1 && chHadEnFrac[np]>0 && chMultiplicity[np]>0 && chEmEnFrac[np]<0.99) || 
 			  ( abs(it->eta())>2.4 && neutHadEnFrac[np]<0.99 && neutEmEnFrac[np]<0.99 && nDaughter[np]>1) );  //Loose (recommended)
 	  id[np] += 1<<0;
- 
 	  //Disc(btag)
 	  disc[np]  = it->bDiscriminator("combinedSecondaryVertexBJetTags"); //Loose=0.244, Medium=0.679, Tight=0.898  
-
+	  //cout << "disc bjet: " << disc[np] << endl;
 	  np++;
   }
 
@@ -416,11 +435,11 @@ CreateNTuple::analyze(const edm::Event& iEvent, const edm::EventSetup& iSetup)
   iEvent.getByLabel(metLabel,met);
   metx=met->begin()->px();
   mety=met->begin()->py();
-  metcov00= (met->front()).getSignificanceMatrix()(0,0);
-  metcov10= (met->front()).getSignificanceMatrix()(1,0);
-  metcov01= (met->front()).getSignificanceMatrix()(0,1);
-  metcov11= (met->front()).getSignificanceMatrix()(1,1);
-
+  metcov[0]= (met->front()).getSignificanceMatrix()(0,0);
+  metcov[1]= (met->front()).getSignificanceMatrix()(1,0);
+  metcov[2]= (met->front()).getSignificanceMatrix()(0,1);
+  metcov[3]= (met->front()).getSignificanceMatrix()(1,1);
+  //cout <<"met: " << metcov[0] << ", "<<metcov[1] << ", "<<metcov[2] << ", "<<metcov[3] <<endl;
 
   t->Fill(); 
 
@@ -433,46 +452,37 @@ CreateNTuple::beginJob()
 {
   f = new TFile("ntuple.root","RECREATE");
   t = new TTree("tree", "NTuple");
-  //Evt info
-  t->Branch("run",&run,"run/I");
-  t->Branch("lumi",&lumi,"lumi/I");
   t->Branch("ev",&ev,"ev/I");
   t->Branch("np",&np,"np/I");
-  //Gen
+  t->Branch("lumi",&lumi,"lumi/I");
+  t->Branch("run",&run,"run/I");
+  t->Branch("disc",disc,"disc[np]/D");
+  t->Branch("e",e,"e[np]/D");
+  t->Branch("evx",&evx,"evx/D");
+  t->Branch("evy",&evy,"evy/D");
+  t->Branch("evz",&evz,"evz/D");
   t->Branch("gnp",&gnp,"gnp/I");
-  t->Branch("gpdgId",gpid,"pid[gnp]/I");
-  t->Branch("gstatus",gstatus,"gstatus[gnp]/I");
+  t->Branch("gpid",gpid,"pid[gnp]/I");
+  t->Branch("ge",ge,"ge[gnp]/D");
   t->Branch("gpx",gpx,"gpx[gnp]/D");
   t->Branch("gpy",gpy,"gpy[gnp]/D");
   t->Branch("gpz",gpz,"gpz[gnp]/D");
-  t->Branch("ge",ge,"ge[gnp]/D");
-  //PU
-  t->Branch("rho",&rho,"rho/I");
-  t->Branch("npu",&npu,"npu/D");
-  //Gen
-  //Common
-  t->Branch("pdgId",pid,"pid[np]/I");
-  t->Branch("disc",disc,"disc[np]/I");
+  t->Branch("gstatus",gstatus,"gstatus[gnp]/I");
   t->Branch("id",id,"id[np]/I");
-  t->Branch("iso",iso,"iso[np]/I");
+  t->Branch("iso",iso,"iso[np]/D");
+  t->Branch("metcov",metcov,"metcov[4]/D");
+  t->Branch("metx",&metx,"metx/D");
+  t->Branch("mety",&mety,"mety/D");
+  t->Branch("npu",&npu,"npu/D");
+  t->Branch("nvtx",&nvtx,"nvtx/I");
+  t->Branch("pid",pid,"pid[np]/I");
   t->Branch("px",px,"px[np]/D");
   t->Branch("py",py,"py[np]/D");
   t->Branch("pz",pz,"pz[np]/D");
+  t->Branch("rho",&rho,"rho/D");
   t->Branch("vx",vx,"vx[np]/D");
   t->Branch("vy",vy,"vy[np]/D");
   t->Branch("vz",vz,"vz[np]/D");
-  t->Branch("e",e,"e[np]/D");
-  //Evt Vertex
-  t->Branch("evx",evx,"evx[np]/D");
-  t->Branch("evy",evy,"evy[np]/D");
-  t->Branch("evz",evz,"evz[np]/D");
-  //met
-  t->Branch("metx",&metx,"metx/D");
-  t->Branch("mety",&mety,"mety/D");
-  t->Branch("metcov00",&metcov00,"metcov/D");
-  t->Branch("metcov10",&metcov10,"metcov/D");
-  t->Branch("metcov01",&metcov01,"metcov/D");
-  t->Branch("metcov11",&metcov11,"metcov/D");
 }
 
 // ------------ method called once each job just after ending the event loop  ------------
@@ -519,55 +529,5 @@ CreateNTuple::fillDescriptions(edm::ConfigurationDescriptions& descriptions) {
 
 //define this as a plug-in
 DEFINE_FWK_MODULE(CreateNTuple);
-
-
-/* do not work!!
-    tau_byDecayModeFinding[np]                          =  it->tauID("hpsPFTauDiscriminationByDecayModeFinding"); 
-    tau_byLooseCombinedIsolationDeltaBetaCorr3Hits[np]  =  it->tauID("hpsPFTauDiscriminationByLooseCombinedIsolationDBSumPtCorr3Hits");
-    tau_byMediumCombinedIsolationDeltaBetaCorr3Hits[np] =  it->tauID("hpsPFTauDiscriminationByMediumCombinedIsolationDBSumPtCorr3Hits");
-    tau_byTightCombinedIsolationDeltaBetaCorr3Hits[np]  =  it->tauID("hpsPFTauDiscriminationByTightCombinedIsolationDBSumPtCorr3Hits");
-    tau_againstElectronLooseMVA3[np]                    =  it->tauID("hpsPFTauDiscriminationByMVA3LooseElectronRejection");
-    tau_againstElectronMediumMVA3[np]                   =  it->tauID("hpsPFTauDiscriminationByMVA3MediumElectronRejection");
-    tau_againstElectronTightMVA3[np]                    =  it->tauID("hpsPFTauDiscriminationByMVA3TightElectronRejection");
-    tau_againstElectronVTightMVA3[np]                   =  it->tauID("hpsPFTauDiscriminationByMVA3VTightElectronRejection");
-    tau_againstMuonLoose3[np]                           =  it->tauID("hpsPFTauDiscriminationByLooseMuonRejection3");
-    //tau_againstMuonMedium3[np]                        =  it->tauID("hpsPFTauDiscriminationByMediumMuonRejection3"); //!!missing!!
-    tau_againstMuonTight3[np]                           =  it->tauID("hpsPFTauDiscriminationByTightMuonRejection3");
-*/
-
-/*
-	  //mother
-	  for(unsigned int im = 0; im < it->numberOfMothers(); ++im) {
-		  status[np]    = it->motherRef(im)->status();  
-		  pid[np]       = it->motherRef(im)->pdgId();
-		  E[np]         = it->motherRef(im)->energy(); 
-		  Px[np]        = it->motherRef(im)->px();
-		  Py[np]        = it->motherRef(im)->py();
-		  Pz[np]        = it->motherRef(im)->pz();
-		  vx[np]        = it->motherRef(im)->vx();
-		  vy[np]        = it->motherRef(im)->vy();
-		  vz[np]        = it->motherRef(im)->vz();
-		  Q[np]         = it->motherRef(im)->charge();
-		  PassDisc[np]  = 0;
-		  PassIso[np]   = 0.;
-		  np++; 
-	  }
-	  //daughter
-	  for(unsigned int id = 0; id < it->numberOfDaughters(); ++id) {
-		  status[np]    = it->daughterRef(id)->status();  
-		  pid[np]       = it->daughterRef(id)->pdgId();
-		  E[np]         = it->daughterRef(id)->energy(); 
-		  Px[np]        = it->daughterRef(id)->px();
-		  Py[np]        = it->daughterRef(id)->py();
-		  Pz[np]        = it->daughterRef(id)->pz();
-		  vx[np]        = it->daughterRef(id)->vx();
-		  vy[np]        = it->daughterRef(id)->vy();
-		  vz[np]        = it->daughterRef(id)->vz();
-		  Q[np]         = it->daughterRef(id)->charge();
-		  PassDisc[np]  = 0;
-		  PassIso[np]   = 0.;
-		  np++; 
-	  }
-*/
 
 
