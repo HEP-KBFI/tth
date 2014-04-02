@@ -1,3 +1,7 @@
 /*
 !/.gitignore
 !/src/
+
+src/.gitignore
+src/EgammaAnalysis/
+src/PhysicsTools/
