@@ -1,7 +1,7 @@
 tth
 ===
 
-A concise TWiki describing this analysis is located in https://twiki.cern.ch/twiki/bin/view/Main/TTHTallinn.
+A concise TWiki describing this analysis is located in https://twiki.cern.ch/twiki/bin/viewauth/CMS/TTHTallinn.
 If something fails to work, run the failing command again with `my_cmd &> log` and send the log to one of the devs (e.g. joosep.pata@cern.ch) putting as much information as you can.
 
 Setup

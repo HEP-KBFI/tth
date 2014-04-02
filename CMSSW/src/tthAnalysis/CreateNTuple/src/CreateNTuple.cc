@@ -2,10 +2,10 @@
 //
 // Package:    CreateNTuple
 // Class:      CreateNTuple
-// 
+//
 /**\class CreateNTuple CreateNTuple.cc tthAnalysis/CreateNTuple/src/CreateNTuple.cc
 
- Description: 
+ Description:
       Main class that writes out all the leptons and relevant details for later analysis of all kind
 
  Implementation:
@@ -59,34 +59,37 @@ class CreateNTuple : public edm::EDAnalyzer {
 public:
   explicit CreateNTuple(const edm::ParameterSet&);
   ~CreateNTuple();
-  
+
   static void fillDescriptions(edm::ConfigurationDescriptions& descriptions);
-  
-  
+
+
 private:
   virtual void beginJob() ;
   virtual void analyze(const edm::Event&, const edm::EventSetup&);
   virtual void endJob() ;
-  
+
   virtual void beginRun(edm::Run const&, edm::EventSetup const&);
   virtual void endRun(edm::Run const&, edm::EventSetup const&);
   virtual void beginLuminosityBlock(edm::LuminosityBlock const&, edm::EventSetup const&);
   virtual void endLuminosityBlock(edm::LuminosityBlock const&, edm::EventSetup const&);
-  
+
+  int storeGenParticle(const reco::Candidate& p);
+
   // ----------member data ---------------------------
   edm::InputTag rhoLabel, puLabel, genLabel, vtxLabel, tauLabel, muonLabel, elecLabel, jetLabel, metLabel;
-  //evt 
+  //evt
   int run, lumi, ev, np;
   //PU
   double npu, rho;
   //gen
-  int gnp, gstatus[MAXPART], gpid[MAXPART], gmother;
-  double gpx[MAXPART], gpy[MAXPART], gpz[MAXPART], ge[MAXPART]; 
+  int gnp, gstatus[MAXPART], gpid[MAXPART], gmother[MAXPART];
+  const reco::Candidate * genparticle_cands[MAXPART];
+  double gpx[MAXPART], gpy[MAXPART], gpz[MAXPART], ge[MAXPART];
   //evt vtx
   int nvtx;
   double evx, evy, evz;
   reco::Vertex pv;
-  //common 
+  //common
   int pid[MAXPART];
   double px[MAXPART], py[MAXPART], pz[MAXPART], e[MAXPART];
   double vx[MAXPART], vy[MAXPART], vz[MAXPART];
@@ -111,7 +114,7 @@ private:
   //met  
   double metx, mety, metcov[4];
   //
-  TTree *t;  
+  TTree *t;
   TFile *f;
 };
 
@@ -160,28 +163,29 @@ CreateNTuple::analyze(const edm::Event& iEvent, const edm::EventSetup& iSetup)
   using namespace reco; using namespace edm; using namespace pat; using namespace std; using namespace isodeposit;
 
   // Re-initialize all variables to zero as a new event has begun
-  run=0; lumi=0; ev=0; np=0; rho=0; npu=0; gnp=0; gmother=0, nvtx=0;
+  run=0; lumi=0; ev=0; np=0; rho=0; npu=0; gnp=0; nvtx=0;
+
   evx=0; evy=0; evz=0; metx=0; mety=0; metcov[3]={0};
   //
   for (int i=0; i<MAXPART; i++) {
     //gen
-    gstatus[i]=0; gpid[i]=0; gpx[i]=0; gpy[i]=0; gpz[i]=0; ge[i]=0;  
+    gstatus[i]=0; gpid[i]=0; gpx[i]=0; gpy[i]=0; gpz[i]=0; ge[i]=0; gmother[i]=0;
     //common
     px[i]=0; py[i]=0; pz[i]=0; e[i]=0; pid[i]=0; vx[i]=0; vy[i]=0; vz[i]=0; id[i]=0; disc[i]=0; iso[i]=0;
     //tau
-    tau_byDecayModeFinding[i]=0;tau_byLooseCombinedIsolationDeltaBetaCorr3Hits[i]=0; 
+    tau_byDecayModeFinding[i]=0;tau_byLooseCombinedIsolationDeltaBetaCorr3Hits[i]=0;
     tau_byMediumCombinedIsolationDeltaBetaCorr3Hits[i]=0; tau_byTightCombinedIsolationDeltaBetaCorr3Hits[i]=0;
-    tau_againstElectronLooseMVA3[i]=0; tau_againstElectronMediumMVA3[i]=0; 
+    tau_againstElectronLooseMVA3[i]=0; tau_againstElectronMediumMVA3[i]=0;
     tau_againstElectronTightMVA3[i]=0; tau_againstElectronVTightMVA3[i]=0;
     tau_againstMuonLoose3[i]=0; tau_againstMuonMedium3[i]=0; tau_againstMuonTight3[i]=0;
-    //muon   
-    sumChHadPt[i]=0; sumNeutHadEt[i]=0; sumPhotonEt[i]=0; sumPUPt[i]=0; 
-    sumChPartPt[i]=0; muonIsoPflow[i]=0; muonIsoPflowPUcorr[i]=0; 
+    //muon
+    sumChHadPt[i]=0; sumNeutHadEt[i]=0; sumPhotonEt[i]=0; sumPUPt[i]=0;
+    sumChPartPt[i]=0; muonIsoPflow[i]=0; muonIsoPflowPUcorr[i]=0;
     //elec
-    chIso03[i]=0; nhIso03[i]=0; phIso03[i]=0; puChIso03[i]=0; relIso[i]=0; relIsodb[i]=0; 
+    chIso03[i]=0; nhIso03[i]=0; phIso03[i]=0; puChIso03[i]=0; relIso[i]=0; relIsodb[i]=0;
     relIsorho[i]=0; mHit[i]=0; convVeto[i]=0; tIP[i]=0; scEta[i]=0;
     //jet
-    neutHadEnFrac[i]=0; neutEmEnFrac[i]=0; nDaughter[i]=0; chHadEnFrac[i]=0; 
+    neutHadEnFrac[i]=0; neutEmEnFrac[i]=0; nDaughter[i]=0; chHadEnFrac[i]=0;
     chMultiplicity[i]=0; chEmEnFrac[i]=0; jetb[i]=0;
   }
 
@@ -203,18 +207,18 @@ CreateNTuple::analyze(const edm::Event& iEvent, const edm::EventSetup& iSetup)
 	  //cout << "npu: "<<npu<<endl;
   }
 
-  //Gen
-  Handle<vector<reco::GenParticle> > genReco; 	
+  // Write out the generator level particles. Since we try to figure out the mother-daughter relationshipts also,
+  // the storeGenParticle() method has on O(n) complexity and this brings the total complexity of the loop to O(n^2). 
+  //This might become a bottleneck if the number of gen. level particles becomes large (e.g. if no filtering is done). 
+  //However, there does not seem to be a way around due to the way mother-daughter relationships are stored in the 
+  //reco::GenParticle class (it is necessary to loop over a lookup table between the object pointers and the new indices).
+  Handle<vector<reco::GenParticle> > genReco;
   iEvent.getByLabel(genLabel,genReco);
-  for (vector<reco::GenParticle>::const_iterator it = genReco->begin(); it != genReco->end(); it++) {
-	  gstatus[gnp]     = it->status();  
-	  gpid[gnp]        = it->pdgId();
-	  ge[gnp]          = it->energy();
-	  gpx[gnp]         = it->px();
-	  gpy[gnp]         = it->py();
-	  gpz[gnp]         = it->pz();
-	  //cout << "gstatus: " << gstatus[gnp] << endl << "gpid: " << gpid[gnp] << endl << "ge: " << ge[gnp] << endl << gpx[gnp] <<", "<<gpy[gnp]<<", "<<gpz[gnp]<<endl;      
-	  gnp++ ;
+  for(const reco::GenParticle& genparticle : *genReco) {
+	  storeGenParticle(genparticle);
+  }
+  if((int)genReco->size() != gnp) {
+	  LogWarning("CreateNTuple") << "genReco->size() and gnp do not match (" << genReco->size() << " vs " << gnp << ")";
   }
 
   //evt vtx
@@ -245,11 +249,10 @@ CreateNTuple::analyze(const edm::Event& iEvent, const edm::EventSetup& iSetup)
 		  sptSel=spt;
 	  }
   } //vertex
-
-	  evx = pv.x();
-	  evy = pv.y();
-	  evz = pv.z();
-	  //cout << "event PV vertex: " << evx << ", "<< evy << ", " << evz  << endl<<endl;
+  evx = pv.x();
+  evy = pv.y();
+  evz = pv.z();
+  //cout << "event PV vertex: " << evx << ", "<< evy << ", " << evz  << endl<<endl;
 
   //tau
   Handle<pat::TauCollection> tauPat;
@@ -330,6 +333,7 @@ CreateNTuple::analyze(const edm::Event& iEvent, const edm::EventSetup& iSetup)
 	  id[np]+= 1<<2; //veto l+j
 	  //cout<<"isVetoLooseMuon: "<<it->isLooseMuon() << " " << it->pt() << " " << it->eta()<< "id: "<<id[np] << endl;
 	  //muon combined relative isolation with Delta-Beta correction: https://twiki.cern.ch/twiki/bin/view/CMSPublic/SWGuideMuonId#Muon_Isolation
+	  //muonIso
 	  sumChHadPt[np]          =  it->pfIsolationR04().sumChargedHadronPt;
 	  sumNeutHadEt[np]        =  it->pfIsolationR04().sumNeutralHadronEt;
 	  sumPhotonEt[np]         =  it->pfIsolationR04().sumPhotonEt;
@@ -366,7 +370,8 @@ CreateNTuple::analyze(const edm::Event& iEvent, const edm::EventSetup& iSetup)
 	  if( it->pt()>20 && abs(it->eta())<2.5 && tIP[np]<0.04 && convVeto && mHit[np]<=0 )
 		  id[np] += 1<<0; //dilepton
 	  //cout << "id1: "<< id[np] <<endl <<endl;
-	  if( it->pt()>30 && abs(it->eta())<2.5 && (!(abs(scEta[np])>1.4442 && abs(scEta[np])<1.5660)) && tIP[np]<0.02 && convVeto && mHit[np]<=0 ) 
+	  if( it->pt()>30 && abs(it->eta())<2.5 && (!(abs(scEta[np])>1.4442 && abs(scEta[np])<1.5660)) &&
+			  tIP[np]<0.02 && convVeto && mHit[np]<=0 )
 		  id[np] += 1<<1; //lepton+jets
 	  //cout << "id2: "<< id[np] <<endl <<endl;
 	  if( it->pt()>10 && abs(it->eta())<2.5)
@@ -386,7 +391,7 @@ CreateNTuple::analyze(const edm::Event& iEvent, const edm::EventSetup& iSetup)
 	  }else{
 		  AEff03 = ElectronEffectiveArea::GetElectronEffectiveArea(ElectronEffectiveArea::kEleGammaAndNeutralHadronIso03, it->superCluster()->eta(), ElectronEffectiveArea::kEleEAFall11MC);
 	  }
-	  //cout << "AEff03"<< AEff03 << endl; 
+	  //cout << "AEff03"<< AEff03 << endl;
 	  chIso03[np]   =  it->chargedHadronIso();
 	  nhIso03[np]   =  it->neutralHadronIso();
 	  phIso03[np]   =  it->photonIso();
@@ -401,7 +406,7 @@ CreateNTuple::analyze(const edm::Event& iEvent, const edm::EventSetup& iSetup)
 	  np++;
   }
 
-  Handle<pat::JetCollection> jetPat;  
+  Handle<pat::JetCollection> jetPat;
   iEvent.getByLabel(jetLabel,jetPat);
   for (pat::JetCollection::const_iterator it = jetPat->begin(); it != jetPat->end(); it++) {
 	  pid[np]     = it->pdgId();
@@ -412,7 +417,7 @@ CreateNTuple::analyze(const edm::Event& iEvent, const edm::EventSetup& iSetup)
 	  vx[np]      = it->vx();
 	  vy[np]      = it->vy();
 	  vz[np]      = it->vz();
-	  // 
+	  //
 	  neutHadEnFrac[np]  = it->neutralHadronEnergyFraction();
 	  neutEmEnFrac[np]   = it->neutralEmEnergyFraction();
 	  nDaughter[np]      = it->numberOfDaughters();
@@ -421,7 +426,7 @@ CreateNTuple::analyze(const edm::Event& iEvent, const edm::EventSetup& iSetup)
 	  chEmEnFrac[np]     = it->chargedEmEnergyFraction();
 	  //id
 	  if ( ( abs(it->eta())<2.4 && neutHadEnFrac[np]<0.99 && neutEmEnFrac[np]<0.99 &&
-				  nDaughter[np]>1 && chHadEnFrac[np]>0 && chMultiplicity[np]>0 && chEmEnFrac[np]<0.99) || 
+				  nDaughter[np]>1 && chHadEnFrac[np]>0 && chMultiplicity[np]>0 && chEmEnFrac[np]<0.99) ||
 			  ( abs(it->eta())>2.4 && neutHadEnFrac[np]<0.99 && neutEmEnFrac[np]<0.99 && nDaughter[np]>1) );  //Loose (recommended)
 	  id[np] += 1<<0;
 	  //Disc(btag)
@@ -441,13 +446,70 @@ CreateNTuple::analyze(const edm::Event& iEvent, const edm::EventSetup& iSetup)
   metcov[3]= (met->front()).getSignificanceMatrix()(1,1);
   //cout <<"met: " << metcov[0] << ", "<<metcov[1] << ", "<<metcov[2] << ", "<<metcov[3] <<endl;
 
-  t->Fill(); 
+  t->Fill();
 
 }
 
+int
+CreateNTuple::storeGenParticle(const reco::Candidate& p)
+{
+	/*
+	 * Stores a gen. particle and returns its index.
+	 *
+	 * If the particle is already stored, just returns the previous index.
+	 * If the particle has a single mother, it first stores the mother,
+	 * so that it could get the mother's index. The mother's index will be
+	 * -1 if the particle does not have a mother and -2 if the particle
+	 * has multiple mothers or -3 if the particle has a single mother but
+	 * with issues (such as being the same as the particle or a null pointer).
+	 */
+
+	// check if it is already processed:
+	for(int i=0; i<gnp; i++) {
+		if(genparticle_cands[i] == &p) {
+			return i;
+		}
+	}
+
+	// parse the mothers
+	int mother_index = -999; // -999 should never appear
+	if(p.numberOfMothers() == 0) {
+		mother_index = -1;
+	} else if(p.numberOfMothers() == 1) {
+		// first, make sure that the particle is not its own mother or did not
+		// come into being from the Great Void of /dev/null (both cases are
+		// apparently possible according to some scholars)
+		if(p.mother() == nullptr) {
+			edm::LogWarning("storeGenParticle") << "mother is a null pointer";
+			mother_index = -3;
+		} else if(p.mother() == &p) {
+			edm::LogWarning("storeGenParticle") << "particle is its own mother";
+			mother_index = -3;
+		} else {
+			mother_index = storeGenParticle(*p.mother());
+		}
+	} else {
+		// otherwise, since p.numberOfMothers() is of type size_t, the value can
+		// only be larger than one and we do not parse multiple mothers
+		mother_index = -2;
+	}
+
+	// "reserve" an index and store necessary values
+	int index = gnp++;
+	genparticle_cands[index] = &p;
+	gstatus[index] = p.status();
+	gpid[index] = p.pdgId();
+	ge[index] = p.energy();
+	gpx[index] = p.px();
+	gpy[index] = p.py();
+	gpz[index] = p.pz();
+	gmother[index] = mother_index;
+
+	return index;
+}
 
 // ------------ method called once each job just before starting event loop  ------------
-void 
+void
 CreateNTuple::beginJob()
 {
   f = new TFile("ntuple.root","RECREATE");
@@ -464,6 +526,7 @@ CreateNTuple::beginJob()
   t->Branch("gnp",&gnp,"gnp/I");
   t->Branch("gpid",gpid,"pid[gnp]/I");
   t->Branch("ge",ge,"ge[gnp]/D");
+  t->Branch("gmother",gmother,"gmother[gnp]/I");
   t->Branch("gpx",gpx,"gpx[gnp]/D");
   t->Branch("gpy",gpy,"gpy[gnp]/D");
   t->Branch("gpz",gpz,"gpz[gnp]/D");
@@ -486,33 +549,33 @@ CreateNTuple::beginJob()
 }
 
 // ------------ method called once each job just after ending the event loop  ------------
-void 
-CreateNTuple::endJob() 
+void
+CreateNTuple::endJob()
 {
 t->Write();
 f->Close();
 }
 
 // ------------ method called when starting to processes a run  ------------
-void 
+void
 CreateNTuple::beginRun(edm::Run const&, edm::EventSetup const&)
 {
 }
 
 // ------------ method called when ending the processing of a run  ------------
-void 
+void
 CreateNTuple::endRun(edm::Run const&, edm::EventSetup const&)
 {
 }
 
 // ------------ method called when starting to processes a luminosity block  ------------
-void 
+void
 CreateNTuple::beginLuminosityBlock(edm::LuminosityBlock const&, edm::EventSetup const&)
 {
 }
 
 // ------------ method called when ending the processing of a luminosity block  ------------
-void 
+void
 CreateNTuple::endLuminosityBlock(edm::LuminosityBlock const&, edm::EventSetup const&)
 {
 }
@@ -529,5 +592,4 @@ CreateNTuple::fillDescriptions(edm::ConfigurationDescriptions& descriptions) {
 
 //define this as a plug-in
 DEFINE_FWK_MODULE(CreateNTuple);
-
 
