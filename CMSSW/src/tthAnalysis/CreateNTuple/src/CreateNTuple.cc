@@ -72,7 +72,7 @@ private:
   virtual void beginLuminosityBlock(edm::LuminosityBlock const&, edm::EventSetup const&);
   virtual void endLuminosityBlock(edm::LuminosityBlock const&, edm::EventSetup const&);
 
-  int recurseDecayTree(const reco::Candidate& p, int mother_index);
+  int storeGenParticle(const reco::Candidate& p);
 
   // ----------member data ---------------------------
   edm::InputTag rhoLabel, puLabel, genLabel, vtxLabel, tauLabel, muonLabel, elecLabel, jetLabel, metLabel;
@@ -220,22 +220,22 @@ CreateNTuple::analyze(const edm::Event& iEvent, const edm::EventSetup& iSetup)
 	  nvtx++;
   }
 
-	// write out the generator level particles
-	// since we also need the mother-daughter relationships, we will recurse
-	// the decay tree instead of just looping over all particles
-	// TODO: make it handle multiple mothers properly
+	// Write out the generator level particles.
+	// Since we try to figure out the mother-daughter relationshipts also,
+	// the storeGenParticle() method has on O(n) complexity and this brings
+	// the total complexity of the loop to O(n^2). This might become a
+	// bottleneck if the number of gen. level particles becomes large (e.g. if
+	// no filtering is done). However, there does not seem to be a way around
+	// due to the way mother-daughter relationships are stored in the
+	// reco::GenParticle class (it is necessary to loop over a lookup table
+	// between the object pointers and the new indices).
 	Handle<vector<reco::GenParticle> > genReco;
 	iEvent.getByLabel(genLabel,genReco);
 	for(const reco::GenParticle& genparticle : *genReco) {
-		//cout << ".. " << &genparticle << " " << genparticle.numberOfMothers() << endl;
-		if(genparticle.numberOfMothers() == 0) {
-			recurseDecayTree(genparticle, -1);
-		}
+		storeGenParticle(genparticle);
 	}
-	//cout << "Genparticles: " << genReco->size() << endl;
-	//cout << "gnp: " << gnp << endl;
 	if((int)genReco->size() != gnp) {
-		LogError("CreateNTuple") << "genReco->size() and gno do not match! " << genReco->size() << " " << gnp;
+		LogWarning("CreateNTuple") << "genReco->size() and gno do not match (" << genReco->size() << " vs " << gnp << ")";
 	}
 
   //tau
@@ -435,9 +435,18 @@ CreateNTuple::analyze(const edm::Event& iEvent, const edm::EventSetup& iSetup)
 }
 
 int
-CreateNTuple::recurseDecayTree(const reco::Candidate& p, int mother_index)
+CreateNTuple::storeGenParticle(const reco::Candidate& p)
 {
-	//using namespace std;
+	/*
+	 * Stores a gen. particle and returns its index.
+	 *
+	 * If the particle is already stored, just returns the previous index.
+	 * If the particle has a single mother, it first stores the mother,
+	 * so that it could get the mother's index. The mother's index will be
+	 * -1 if the particle does not have a mother and -2 if the particle
+	 * has multiple mothers or -3 if the particle has a single mother but
+	 * with issues (such as being the same as the particle or a null pointer).
+	 */
 
 	// check if it is already processed:
 	for(int i=0; i<gnp; i++) {
@@ -446,7 +455,31 @@ CreateNTuple::recurseDecayTree(const reco::Candidate& p, int mother_index)
 		}
 	}
 
-	int index = gnp;
+	// parse the mothers
+	int mother_index = -999; // -999 should never appear
+	if(p.numberOfMothers() == 0) {
+		mother_index = -1;
+	} else if(p.numberOfMothers() == 1) {
+		// first, make sure that the particle is not its own mother or did not
+		// come into being from the Great Void of /dev/null (both cases are
+		// apparently possible according to some scholars)
+		if(p.mother() == nullptr) {
+			edm::LogWarning("storeGenParticle") << "mother is a null pointer";
+			mother_index = -3;
+		} else if(p.mother() == &p) {
+			edm::LogWarning("storeGenParticle") << "particle is its own mother";
+			mother_index = -3;
+		} else {
+			mother_index = storeGenParticle(*p.mother());
+		}
+	} else {
+		// otherwise, since p.numberOfMothers() is of type size_t, the value can
+		// only be larger than one and we do not parse multiple mothers
+		mother_index = -2;
+	}
+
+	// "reserve" an index and store necessary values
+	int index = gnp++;
 	genparticle_cands[index] = &p;
 	gstatus[index] = p.status();
 	gpid[index] = p.pdgId();
@@ -456,15 +489,7 @@ CreateNTuple::recurseDecayTree(const reco::Candidate& p, int mother_index)
 	gpz[index] = p.pz();
 	gmother[index] = mother_index;
 
-	gnp++;
-
-	//cout << "Mommys!: " << p.numberOfMothers() << endl;
-	for(const reco::Candidate& d : p) {
-		recurseDecayTree(d, index);
-		//cout << "  >  " << d.numberOfDaughters() << endl;
-	}
-
-	return 0;
+	return index;
 }
 
 // ------------ method called once each job just before starting event loop  ------------
