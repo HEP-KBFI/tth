@@ -12,6 +12,17 @@ Setup
 3. make sure the last line printed out is `setup succeeded`, otherwise there were problems
 4. run `make` to compile
 
+
+Updating
+========
+The safest way to update the code is to do (make sure you've committed all your changes!)
+
+0. `git pull` or if you need a different branch `git pull origin THE_BRANCH_YOU_NEED`
+1. `rm -Rf CMSSW`
+2. `source setup.sh`
+3. `cd CMSSW;scram b -j20`
+
+
 Creating a PAT-tuple (step1)
 ============================
 0. Make sure the code successfully compiled (see the section **Setup**)
@@ -22,3 +33,4 @@ FWLite example code
 1. Code is in `CMSSW/src/UserCode/TTHPAT/bin/simple_loop.cc`
 1. compile with `scram b UserCode/TTHPAT`. You should see in the output `>> Compiling  /home/joosep/test/tth/CMSSW/src/UserCode/TTHPAT/bin/simple_loop.cc`
 2. run `$CMSSW_BASE/bin/$SCRAM_ARCH/simple_loop`, takes as input `input.root`. If the file does not exist compilation did not succeed!
+
