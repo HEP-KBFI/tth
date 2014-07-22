@@ -8,74 +8,58 @@
 #include <iostream>
 #include <string.h>
 
-void MergeTrees(TChain& tree, std::ifstream& filelist);
+using namespace std;
 
-int main () {
+void MergeTrees(TChain& tree, std::ifstream& fileFist);
 
-  //several files
-  TChain tree("demo/tree");
-  //orig
-  std::ifstream filelist("FileToSkim/TTH_HToTauTau_M-125.txt"); 
-  //std::ifstream filelist("FileToSkim/TTJets.txt");
+int main (int argc, char * argv[]) {
+        // for a single root file 
+        //TFile f("/hdfs/cms/store/user/calpas/tth/ntuple/v1/ww/output_110_1_QOY.root");
+        //f.cd("demo");
+        //TTree* tree = (TTree*) gROOT->FindObject("tree");
+	//SkimNtuple an(tree);
 
-  MergeTrees(tree, filelist);
+	//cout << "argc: " << argc << endl;
+	//for(int i=0; i < argc; i++) { cout << "argv "<< i <<": "<< argv[i] << endl;}
 
-  SkimNtuple an(&tree);
-  an.Loop();
+        // for mutiple root file
+	TChain tree("demo/tree");
 
+	std::ifstream ifs (argv[1]);
 
-/*
-//With one file
-TFile f("FileToSkim/TTH_HToTauTau_M-125.root");
-//TFile f("/hdfs/cms/store/user/calpas/TTH/slim/v3/TTH_HToTauTau_M-125_8TeV_pythia6/TTH_HToTauTau_M-125_27_1_I7s.root");
-f.cd("demo");
-//f.ls();
-//gDirectory->pwd();
-//gFile->pwd();
- TTree* tree = (TTree*) gROOT->FindObject("tree");
- SkimNtuple an(tree);
- an.Loop();
-*/
+	MergeTrees(tree, ifs);
 
- return EXIT_SUCCESS;
+	SkimNtuple an(&tree);
+
+	an.Loop();
+
+	return 0;
 }
 
 
-void
-MergeTrees(TChain& tree, std::ifstream& filelist)
-{
-  if (not (filelist.is_open())) {
-    std::cerr << "failed in open." << std::endl;
-    exit(EXIT_FAILURE);
-  }
+void MergeTrees(TChain& tree, std::ifstream& ifs){
 
-  char line[BUFSIZ];
-  int counter = 0; 
+	if (not (ifs.is_open())) {
+		std::cerr << "failed in open." << std::endl; exit(EXIT_FAILURE);
+	}
 
- //while (not (filelist.eof())) { //eof flag for end of file
-  while ( counter<1) { //eof flag for end of file
-    filelist.getline(line, sizeof(line));
+	char line[BUFSIZ]; int counter = 0; 
 
-    if (strcmp(line, "") == 0) continue;
+	while ( !ifs.eof() ) {
+	//while ( counter<5) { //eof flag for end of file
+		  ifs.getline(line, sizeof(line));
+		  if (strcmp(line, "") == 0) continue;
+		  TFile a(line);
+		  if (!a.IsOpen()) {
+			  std::cerr << "failed in open :" << line << std::endl; exit(EXIT_FAILURE);
+		  }
+		  counter++;
+		  tree.AddFile(line);
+		  //std::cout<<"file number: " << counter << std::endl;
+	}
+	cout << "nfiles: "<< counter << endl; // to remove last empty line
 
-    TFile a(line);
-    if (!a.IsOpen()) {
-      std::cerr << "failed in open :" << line << std::endl;
-      exit(EXIT_FAILURE);
-    }
-    
-    //ERROR MESSAGE FOR NOTHING!!
-    //   if (gROOT->FindObject(tree.GetName()) == 0) {
-    //   //if (gROOT->FindObject("tree") == 0) {
-    //     std::cerr << tree.GetName() << " is not found in :" << line << std::endl;
-    //     exit(EXIT_FAILURE);
-    //   }
-
-    counter ++ ;
-    tree.AddFile(line); 
-    std::cout << "file number: "<< counter << std::endl;
+	return;
 }
-  std::cout << counter << " files are loaded." << std::endl;
- 
- return;
-}
+
+

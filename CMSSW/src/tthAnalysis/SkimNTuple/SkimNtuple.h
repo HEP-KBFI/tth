@@ -61,6 +61,7 @@ public :
    Double_t        py[val];   //[np]
    Double_t        pz[val];   //[np]
    Double_t        rho;
+   Int_t           trig;
    Double_t        vx[val];   //[np]
    Double_t        vy[val];   //[np]
    Double_t        vz[val];   //[np]
@@ -95,6 +96,7 @@ public :
    TBranch        *b_py;   //!
    TBranch        *b_pz;   //!
    TBranch        *b_rho;   //!
+   TBranch        *b_trig;   //!
    TBranch        *b_vx;   //!
    TBranch        *b_vy;   //!
    TBranch        *b_vz;   //!
@@ -118,15 +120,15 @@ public :
 
    std::vector<int>::iterator igtau;
 
-   TLorentzVector Lrtau, Lgtau;
+   TLorentzVector Lrtau, Lgtau, rtau;
 
    bool matchGen;
 
    Long64_t nentries;
 
-   TH1F  *hpt, *h0pt, *h1pt, *h2pt, *h3pt, *h4pt, *h8pt;
+   TH1F  *h0, *h1, *h2, *h3, *h4, *h5, *h6;
 
-   TFile *skimfile;
+   TFile *file;
    TTree *skimtree;
 
 };
@@ -146,15 +148,15 @@ SkimNtuple::SkimNtuple(TTree *tree) : fChain(0)
 
 	nentries =0;
 
-	skimfile =new TFile("skim_TTH_HToTauTau_M-125.root","RECREATE");
+	file =new TFile("output.root","RECREATE");
 
-	hpt  = new TH1F("htaupt",   "taupt",       100, 0, 300);
-	h0pt = new TH1F("htaupt0",  "taupt 1<<0",  100, 0, 300);
-	h1pt = new TH1F("htaupt1",  "taupt 1<<1",  100, 0, 300);
-	h2pt = new TH1F("htaupt2",  "taupt 1<<2",  100, 0, 300);
-	h3pt = new TH1F("htaupt3",  "taupt 1<<3",  100, 0, 300);
-	h4pt = new TH1F("htaupt4",  "taupt 1<<4",  100, 0, 300);
-	h8pt = new TH1F("htaupt8",  "taupt 1<<8",  100, 0, 300);
+	h0 = new TH1F("h0",  "taupt",  100, 0, 300);
+	h1 = new TH1F("h1",  "taupt 1<<0",  100, 0, 300);
+	h2 = new TH1F("h2",  "taupt 1<<1",  100, 0, 300);
+	h3 = new TH1F("h3",  "taupt 1<<2",  100, 0, 300);
+	h4 = new TH1F("h4",  "taupt 1<<3",  100, 0, 300);
+	h5 = new TH1F("h5",  "taupt 1<<4",  100, 0, 300);
+	h6 = new TH1F("h6",  "taupt 1<<8",  100, 0, 300);
 
 	skimtree =new TTree("tree","skim tree");
 	skimtree->Branch("ev",&ev,"ev/I");
@@ -186,6 +188,7 @@ SkimNtuple::SkimNtuple(TTree *tree) : fChain(0)
 	skimtree->Branch("py",py,"py[np]/D");
 	skimtree->Branch("pz",pz,"pz[np]/D");
 	skimtree->Branch("rho",&rho,"rho/D");
+	skimtree->Branch("trig",&trig,"trig/I");
 	skimtree->Branch("vx",vx,"vx[np]/D");
 	skimtree->Branch("vy",vy,"vy[np]/D");
 	skimtree->Branch("vz",vz,"vz[np]/D");
@@ -194,20 +197,20 @@ SkimNtuple::SkimNtuple(TTree *tree) : fChain(0)
 SkimNtuple::~SkimNtuple()
 {
 	skimtree->Write();
-        skimfile->Write(); 
-        skimfile->Close(); 
+        file->Write(); 
+        file->Close(); 
 
-	//delete skimfile;
+	//delete file;
 	//if (!fChain) return;
 	//delete fChain->GetCurrentFile(); //crash
 
 	//print out
-	std::cout<<std::setw(20)<<"Selection"       <<std::setw(12)<<"Evt"       <<std::setw(12)<<"C.Eff.%"<<std::endl;
+	std::cout<<std::setw(20)<<"Selection"       <<std::setw(12)<<"Evt"       <<std::setw(12)<<"C.Eff.%"      <<std::endl;
 	std::cout<<"=========================================================="  <<std::endl;
-	std::cout<<std::setw(20)<<"Initial:"        <<std::setw(12)<<nev         <<std::setw(12)<<"100"<<std::endl;
-	std::cout<<std::setw(20)<<"tight muon:"     <<std::setw(12)<<ntmu        <<std::setw(12)<< 100*ntmu/nentries <<std::endl;
-	std::cout<<std::setw(20)<<"tight ele:"      <<std::setw(12)<<nte         <<std::setw(12)<< 100*nte/nentries  <<std::endl;
-	std::cout<<std::setw(20)<<"loose tau:"      <<std::setw(12)<<ntau        <<std::setw(12)<< 100*ntau/nentries <<std::endl;
+	std::cout<<std::setw(20)<<"Initial:"        <<std::setw(12)<<nev         <<std::setw(12)<<"100"          <<std::endl;
+	std::cout<<std::setw(20)<<"tight muon:"     <<std::setw(12)<<ntmu        <<std::setw(12)<< 100*ntmu/nev  <<std::endl;
+	std::cout<<std::setw(20)<<"tight ele:"      <<std::setw(12)<<nte         <<std::setw(12)<< 100*nte/nev   <<std::endl;
+	std::cout<<std::setw(20)<<"loose tau:"      <<std::setw(12)<<ntau        <<std::setw(12)<< 100*ntau/nev  <<std::endl;
 }
 
 Int_t SkimNtuple::GetEntry(Long64_t entry)
@@ -274,6 +277,7 @@ void SkimNtuple::Init(TTree *tree)
    fChain->SetBranchAddress("py", py, &b_py);
    fChain->SetBranchAddress("pz", pz, &b_pz);
    fChain->SetBranchAddress("rho", &rho, &b_rho);
+   fChain->SetBranchAddress("trig", &trig, &b_trig);
    fChain->SetBranchAddress("vx", vx, &b_vx);
    fChain->SetBranchAddress("vy", vy, &b_vy);
    fChain->SetBranchAddress("vz", vz, &b_vz);

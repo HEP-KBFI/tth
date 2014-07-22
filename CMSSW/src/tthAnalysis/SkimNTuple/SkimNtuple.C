@@ -42,7 +42,7 @@ void SkimNtuple::Loop()
    Long64_t nbytes = 0, nb = 0;
 
    for (Long64_t jentry=0; jentry<nentries;jentry++) { //evt
-   //for (Long64_t jentry=0; jentry<2;jentry++) { //evt
+   //for (Long64_t jentry=0; jentry<20000;jentry++) { //evt
       Long64_t ientry = LoadTree(jentry);
       if (ientry < 0) break;
       nb = fChain->GetEntry(jentry);   nbytes += nb;
@@ -55,31 +55,58 @@ void SkimNtuple::Loop()
 
       nbmu=0; nbe=0; nbtau=0;
 
-      for (Int_t i = 0; i < np; i++){
+      for ( int i=0; i<np; i++){
 	      if(abs(pid[i])==13 && (id[i]&idtmu) ==idtmu  ) nbmu++;
 	      if(abs(pid[i])==11 && (id[i]&idte)  ==idte   ) nbe++;
 	      if(abs(pid[i])==15 && (id[i]&idltau)==idltau ) nbtau++;
       }
       nev++;
 
-      if( nbmu >=1) ntmu++; if( nbe >=1) nte++; if( nbtau >=2) ntau++;
+      if( nbmu>0) ntmu++; if( nbe>0) nte++; if( nbtau>1) ntau++;
 
-      if( nbmu>=1 || nbe>=1 ) skimtree->Fill();
+      if( (nbmu>0 || nbe>0) && nbtau>0 ) skimtree->Fill();
+      //if( nbmu>0 ) skimtree->Fill();
 
 
      ///////////////////////////////////
      //GenLevel study for tau eff.
      ///////////////////////////////////
 
+/*
+      //With this method I got 50% eff for a loose iso cut
+      //according to the expert Tau::genJet() match ONLY hadronic tau to the generator
+      for(int i=0; i<np; i++){
 
+	      if( ! (abs(pid[i])==15 && (id[i]&1<<10)==1<<10)) continue;
+
+	      rtau.SetPxPyPzE(px[i], py[i], pz[i], e[i]);
+
+	      if(!(rtau.Pt()>20 && fabs(rtau.Eta())< 2.3)) continue;
+
+	      h0->Fill(rtau.Pt());
+
+	      if((id[i]&1<<0)==1<<0) h1->Fill(rtau.Pt());
+
+	      if((id[i]&1<<1)==1<<1) h2->Fill(rtau.Pt());
+
+	      if((id[i]&1<<2)==1<<2) h3->Fill(rtau.Pt());
+
+	      if((id[i]&1<<3)==1<<3) h4->Fill(rtau.Pt());
+
+	      if((id[i]&1<<4)==1<<4) h5->Fill(rtau.Pt());
+
+	      if((id[i]&1<<8)==1<<8) h6->Fill(rtau.Pt());
+      }
+*/
+
+/*
+      //with this method I also got 50% eff for a loose cut
       //get all hadronic gen taus index
       vgtau.clear();  
-      for ( int i =0; i <gnp; i++){
-	      if ( abs(gpid[i])==15 && gstatus[i]==2 ) vgtau.push_back(i); 
-      }
+      for ( int i=0; i<gnp; i++){ if ( abs(gpid[i])==15 && gstatus[i]==2 ) vgtau.push_back(i); }
 
       //remove lepton taus from all taus and keep hadronic taus
-      for ( int i =0; i <gnp; i++){
+      for ( int i=0; i<gnp; i++){
 	      if( abs(gpid[i])==11 || abs(gpid[i])==13 ){
 		      igtau = find(vgtau.begin(), vgtau.end(), gmother[i]) ; // check if the lepton mother is a tau (include in vgtau)
 		      if ( igtau!=vgtau.end() )  vgtau.erase(igtau); // if yes, remove this tau in vgtau
@@ -88,62 +115,33 @@ void SkimNtuple::Loop()
 
       //Get the reco hadronic tau index
       vrtau.clear(); 
-      for (int i =0; i <np; i++){
-	      if( abs(pid[i])==15) vrtau.push_back(i);
-      }
+      for (int i=0; i<np; i++){ if( abs(pid[i])==15) vrtau.push_back(i);}
 
       //recoTau+GenTau matching
-      for(int i : vrtau){//reco
 
-	      Lrtau.SetPxPyPzE( px[i], py[i], pz[i], e[i] );
-	      if( !(Lrtau.Pt()>20 && fabs(Lrtau.Eta())<2.3 )) continue;
-
-	      matchGen=false;
 	
-	      for(int j : vgtau){//gen
+      for(int j : vgtau){//gen
 
-		      Lgtau.SetPxPyPzE( px[j], py[j], pz[j], e[j] );
-		      if( !(Lgtau.Pt()>20 && fabs(Lgtau.Eta())<2.3 )) continue;
+	      Lgtau.SetPxPyPzE( gpx[j], gpy[j], gpz[j], ge[j] );
+	      if( !(Lgtau.Pt()>20 && fabs(Lgtau.Eta())<2.3 )) continue;
 
-		      if(Lrtau.DeltaR(Lgtau)>0.3) continue; //recoMathGen
-		      matchGen=true;
+	      for(int i : vrtau){//reco
+
+		      Lrtau.SetPxPyPzE( px[i], py[i], pz[i], e[i] );
+		      if( !(Lrtau.Pt()>20 && fabs(Lrtau.Eta())<2.3 )) continue;
+
+		      if( !(Lrtau.DeltaR(Lgtau)<0.2 && (Lrtau.Pt()-Lgtau.Pt())<5)) continue; //recoMathGen
+	    
+		      h0->Fill(Lrtau.Pt());
+		      if( (id[i]&1<<0)==1<<0) h1->Fill(Lrtau.Pt());
+		      if( (id[i]&1<<1)==1<<1) h2->Fill(Lrtau.Pt());
+		      if( (id[i]&1<<2)==1<<2) h3->Fill(Lrtau.Pt());
+		      if( (id[i]&1<<3)==1<<3) h4->Fill(Lrtau.Pt());
 	      }
-	      if( !matchGen) continue;
 
-	      h0pt->Fill(Lrtau.Pt());
-	      if( (id[i]&1<<1)==1<<1) h1pt->Fill(Lrtau.Pt());
-	      if( (id[i]&1<<2)==1<<2) h2pt->Fill(Lrtau.Pt());
-	      if( (id[i]&1<<3)==1<<3) h3pt->Fill(Lrtau.Pt());
-
-      }
-
-
-
-/*  
-      //reco+genmatching
-      for(int i=0; i<np; i++){
-	      if(!(abs(pid[i])==15 && (id[i]&1<<10)==1<<10)) continue; //check if the reco tau match a hadronic gentau
-
-	      gtau.SetPxPyPzE(px[i], py[i], pz[i], e[i]);
-
-	      if(!(gtau.Pt()>20 && fabs(gtau.Eta())< 2.3)) continue;
-
-	      hpt->Fill(gtau.Pt());
-
-	      //check hadronic gentau eff. for different au id
-	      if((id[i]&1<<0)==1<<0) h0pt->Fill(gtau.Pt());
-
-	      if((id[i]&1<<1)==1<<1) h1pt->Fill(gtau.Pt());
-
-	      if((id[i]&1<<2)==1<<2) h2pt->Fill(gtau.Pt());
-
-	      if((id[i]&1<<3)==1<<3) h3pt->Fill(gtau.Pt());
-
-	      if((id[i]&1<<4)==1<<4) h4pt->Fill(gtau.Pt());
-
-	      if((id[i]&1<<8)==1<<8) h8pt->Fill(gtau.Pt());
       }
 */
+
 
    }//evt
 
