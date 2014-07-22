@@ -1,0 +1,36 @@
+nvtx_sm   nPV
+metpt_sm   metPt            
+
+mupt_sm  muPt           
+mueta_sm muEta          
+
+tau0pt_sm  tau0Pt           
+tau0eta_sm tau0Eta          
+tau1pt_sm  tau1Pt           
+tau1eta_sm tau1Eta          
+dr2tau_sm  drtau01          
+
+jpt_sm     jPt            
+j0pt_sm    j0Pt            
+j0eta_sm   j0Eta            
+j0e_sm     j0E
+j1pt_sm    j1Pt            
+j1eta_sm   j1Eta            
+j1e_sm     j1E
+jdr01_sm   Drj01            
+jzeta_sm   jDisc            
+jmult_sm   jMult   
+2jm_sm     2jM
+
+bpt_sm     bPt              
+b0pt_sm    b0Pt              
+b0eta_sm   b0Eta              
+b0e_sm     b0E              
+b1pt_sm    b1Pt
+b1eta_sm   b1Eta
+b1e_sm     b1E              
+bdr01_sm   Drb01            
+bzeta_sm   bDisc              
+bmult_sm   bMult           
+2bm_sm     2bM
+

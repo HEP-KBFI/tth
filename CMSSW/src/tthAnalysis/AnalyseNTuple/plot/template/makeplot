@@ -1,0 +1,14 @@
+#!/bin/bash
+F=/tmp/prlist
+grep -v ^$ $1 > $F
+N=`wc $F|awk '{print $1}'`
+
+for i in `seq $N`; do 
+  HN=`head -$i $F|tail -1|awk '{print $1}'`
+  XNAME=`head -$i $F|tail -1|awk '{print $2}'`
+
+  sed "s+HN+$HN+g;s+XNAME+$XNAME+g" template.C > plot_$HN.C
+
+done
+
+mv plot_*.C ../
