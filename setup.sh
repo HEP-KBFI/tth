@@ -41,7 +41,9 @@ git submodule update
 #git submodule add https://github.com/jpata/AnalysisModules CMSSW/src/AnalysisModules
 #
 ##pull common PAT code for TTH and singletop
-#git submodule add https://github.com/jpata/tth-pfbreco CMSSW/src/UserCode/TTHPAT
+#git submodule add https://github.com/HEP-KBFI/tth-pfbreco CMSSW/src/UserCode/TTHPAT
+
+#git submodule add git@github.com:cms-analysis/RecoMET-METAnalyzers.git CMSSW/src/RecoMET/METAnalyzers
 
 
 echo "!!!!!!!! setup succeeded !!!!!!!!"

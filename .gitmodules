@@ -7,3 +7,6 @@
 [submodule "CMSSW/src/CMGTools/External"]
 	path = CMSSW/src/CMGTools/External
 	url = https://github.com/jpata/UserCode-CMG-CMGTools-External
+[submodule "CMSSW/src/RecoMET/METAnalyzers"]
+	path = CMSSW/src/RecoMET/METAnalyzers
+	url = git@github.com:cms-analysis/RecoMET-METAnalyzers.git
