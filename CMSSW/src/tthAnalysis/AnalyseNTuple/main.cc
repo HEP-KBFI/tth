@@ -2,30 +2,27 @@
 #include "TFile.h"
 #include "TROOT.h"
 #include "TTree.h"
-#include "stdlib.h"
 #include <iostream>
 #include <string>  
 
 using namespace std;
 
 int main ( int argc, char * argv[]) {
-	
-	//cout << "Number of args: " << argc << endl; for(int i=0; i < argc; i++) cout << i << ": `" << argv[i] << "`" << endl;
-	 
-	TFile f(argv[1]); //load root file
 
-	string fn=argv[1]; cout << "Processing file: " << fn << endl;
+    string fn=argv[1]; cout << "Processing file: " << fn << endl;
 
-	TTree* tree = (TTree*) gROOT->FindObject("tree");
+    TFile f(fn.c_str()); //if (f==0) { cout << "Error: cannot open " << fn << endl;}
 
-	AnalyseNtuple an(tree);
+    TTree* tree = (TTree*) f.GetObjectChecked("tree", "TTree");
 
-        string tag[]={"tth125", "dyjets", "ttjets", "ttwjets", "ttzjets", "t_t", "t_s",
-                      "t_tw", "tbar_t", "tbar_s", "tbar_tw", "ww", "wz", "zz", "singleMu", "singleEl"};
+    AnalyseNtuple an(tree);
 
-	for (int i=0; i<16; i++){ if (fn.find(tag[i]) != std::string::npos) an.flag(i); }
+    vector<string> tags {"tth125", "dyjets", "ttjets", "ttwjets", "ttzjets", "t_t", "t_s",
+	                 "t_tw", "tbar_t", "tbar_s", "tbar_tw", "ww", "wz", "zz", "singleMu", "singleEl"};
 
-	an.Loop();
+    for ( int i=0; i<tags.size(); i++){ if (fn.find(tags[i]) != std::string::npos) an.flag(i); }
 
-	return EXIT_SUCCESS;
+    an.Loop();
+
+    return 0;
 }
