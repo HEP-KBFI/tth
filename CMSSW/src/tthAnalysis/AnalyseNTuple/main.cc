@@ -3,7 +3,8 @@
 #include "TROOT.h"
 #include "TTree.h"
 #include <iostream>
-#include <string>  
+#include <string>
+#include <vector>
 
 using namespace std;
 
@@ -11,7 +12,7 @@ int main ( int argc, char * argv[]) {
 
     string fn=argv[1]; cout << "Processing file: " << fn << endl;
 
-    TFile f(fn.c_str()); //if (f==0) { cout << "Error: cannot open " << fn << endl;}
+    TFile f(fn.c_str()); 
 
     TTree* tree = (TTree*) f.GetObjectChecked("tree", "TTree");
 
